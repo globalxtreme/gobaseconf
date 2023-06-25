@@ -1,7 +1,7 @@
 package error
 
 import (
-	"github.com/globalxtreme/gomodule-baseconf/response"
+	"github.com/globalxtreme/gobaseconf/response"
 	"net/http"
 )
 
