@@ -5,17 +5,17 @@ var (
 )
 
 type EmployeeIdentifier struct {
-	ID               string               `json:"id"`
-	FullName         string               `json:"fullName"`
-	EmployeeNo       string               `json:"employeeNo"`
-	Email            string               `json:"email"`
-	Superadmin       bool                 `json:"superadmin"`
-	Division         idName               `json:"division"`
-	User             user                 `json:"user"`
-	CompanyOffice    companyOffice        `json:"companyOffice"`
-	CompanyOfficeIds []int                `json:"companyOfficeIds"`
-	Roles            map[bool]interface{} `json:"roles"`
-	Permissions      map[bool]interface{} `json:"permissions"`
+	ID               string                 `json:"id"`
+	FullName         string                 `json:"fullName"`
+	EmployeeNo       string                 `json:"employeeNo"`
+	Email            string                 `json:"email"`
+	Superadmin       bool                   `json:"superadmin"`
+	Division         idName                 `json:"division"`
+	User             user                   `json:"user"`
+	CompanyOffice    companyOffice          `json:"companyOffice"`
+	CompanyOfficeIds []int                  `json:"companyOfficeIds"`
+	Roles            map[string]interface{} `json:"roles"`
+	Permissions      map[string]interface{} `json:"permissions"`
 }
 
 type idName struct {
