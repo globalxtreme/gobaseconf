@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 )
@@ -23,4 +24,13 @@ func RandomString(length int) string {
 	}
 
 	return string(randomBytes) + strconv.FormatInt(time.Now().UnixNano(), 10)
+}
+
+func CheckAndCreateDirectory(path string) {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			os.MkdirAll(path, os.ModePerm)
+		}
+	}
 }
