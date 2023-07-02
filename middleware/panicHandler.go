@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"encoding/json"
+	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/globalxtreme/gobaseconf/response"
 	"log"
 	"net/http"
@@ -12,7 +13,7 @@ func PanicHandler(next http.Handler) http.Handler {
 		defer func() {
 			if r := recover(); r != nil {
 				w.Header().Set("Content-Type", "application/json")
-				log.Println(r)
+				xtremelog.Error(r)
 
 				var res *response.ResponseError
 				if panicData, ok := r.(*response.ResponseError); ok {
