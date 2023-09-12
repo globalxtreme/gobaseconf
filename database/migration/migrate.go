@@ -32,11 +32,11 @@ func Migrate(tables []Table, columns []Column) {
 				migrator.DropTable(table.DropTable)
 			}
 		}
-
 	}
 
 	for _, column := range columns {
 		migration = config.SetMigration(column.Connection)
+		migrator = migration.Table(column.Model.TableName()).Migrator()
 
 		if len(column.RenameColumns) > 0 {
 			for _, rename := range column.RenameColumns {
