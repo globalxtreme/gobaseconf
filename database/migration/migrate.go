@@ -12,6 +12,8 @@ func Migrate(tables []Table, columns []Column) {
 	for _, table := range tables {
 		if len(table.Collate) > 0 {
 			migration = config.SetMigration(table.Connection, table.Collate)
+		} else {
+			migration = table.Connection
 		}
 
 		if table.CreateTable != nil {
@@ -39,6 +41,8 @@ func Migrate(tables []Table, columns []Column) {
 	for _, column := range columns {
 		if len(column.Collate) > 0 {
 			migration = config.SetMigration(column.Connection, column.Collate)
+		} else {
+			migration = column.Connection
 		}
 
 		migrator = migration.Table(column.Model.TableName()).Migrator()
