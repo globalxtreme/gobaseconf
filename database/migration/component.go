@@ -10,6 +10,7 @@ type Table struct {
 	CreateTable schema.Tabler
 	RenameTable Rename
 	DropTable   string
+	Collate     string
 }
 
 type Column struct {
@@ -19,6 +20,7 @@ type Column struct {
 	AddColumns    []string
 	DropColumns   []string
 	AlterColumns  []string
+	Collate       string
 }
 
 type Rename struct {
