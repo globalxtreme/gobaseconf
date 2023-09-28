@@ -10,11 +10,9 @@ func Migrate(tables []Table, columns []Column) {
 	var migrator gorm.Migrator
 
 	for _, table := range tables {
-		if len(table.Collate) == 0 {
-			table.Collate = config.MYSQL_COLLATE
+		if len(table.Collate) > 0 {
+			migration = config.SetMigration(table.Connection, table.Collate)
 		}
-
-		migration = config.SetMigration(table.Connection, table.Collate)
 
 		if table.CreateTable != nil {
 			migrator = migration.Table(table.CreateTable.TableName()).Migrator()
@@ -39,11 +37,10 @@ func Migrate(tables []Table, columns []Column) {
 	}
 
 	for _, column := range columns {
-		if len(column.Collate) == 0 {
-			column.Collate = config.MYSQL_COLLATE
+		if len(column.Collate) > 0 {
+			migration = config.SetMigration(column.Connection, column.Collate)
 		}
 
-		migration = config.SetMigration(column.Connection, column.Collate)
 		migrator = migration.Table(column.Model.TableName()).Migrator()
 
 		if len(column.RenameColumns) > 0 {
