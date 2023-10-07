@@ -5,22 +5,22 @@ import (
 	"net/http"
 )
 
-func ErrUnauthenticated(internalMsg string) {
+func ErrXtremeUnauthenticated(internalMsg string) {
 	response.Error(http.StatusUnauthorized, "Unauthenticated.", internalMsg, nil)
 }
 
-func ErrBadRequest(internalMsg string) {
+func ErrXtremeBadRequest(internalMsg string) {
 	response.Error(http.StatusBadRequest, "Bad request!", internalMsg, nil)
 }
 
-func ErrPayloadVeryLarge(internalMsg string) {
+func ErrXtremePayloadVeryLarge(internalMsg string) {
 	response.Error(http.StatusRequestEntityTooLarge, "Your payload very large!", internalMsg, nil)
 }
 
-func ErrValidation(attributes []interface{}) {
+func ErrXtremeValidation(attributes []interface{}) {
 	response.Error(http.StatusBadRequest, "Missing Required Parameter", "", attributes)
 }
 
-func ErrNotFound(internalMsg string) {
+func ErrXtremeNotFound(internalMsg string) {
 	response.Error(http.StatusNotFound, "Data not found", internalMsg, nil)
 }

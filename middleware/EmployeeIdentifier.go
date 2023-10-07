@@ -20,12 +20,12 @@ func EmployeeIdentifier(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("IDENTIFIER")
 		if len(token) == 0 {
-			errResponse.ErrUnauthenticated("IDENTIFIER not found")
+			errResponse.ErrXtremeUnauthenticated("IDENTIFIER not found")
 		}
 
 		tokenDecode, err := base64.StdEncoding.DecodeString(token)
 		if err != nil {
-			errResponse.ErrUnauthenticated("Unable to decode token!!")
+			errResponse.ErrXtremeUnauthenticated("Unable to decode token!!")
 		}
 
 		iv := tokenDecode[0:16]
@@ -37,7 +37,7 @@ func EmployeeIdentifier(next http.Handler) http.Handler {
 
 		block, err := aes.NewCipher(secret)
 		if err != nil {
-			errResponse.ErrUnauthenticated(fmt.Sprintf("Unable to decode token!! %s", err))
+			errResponse.ErrXtremeUnauthenticated(fmt.Sprintf("Unable to decode token!! %s", err))
 		}
 
 		mode := cipher.NewCBCDecrypter(block, iv)
@@ -46,12 +46,12 @@ func EmployeeIdentifier(next http.Handler) http.Handler {
 
 		identifierData, err = DecompressZlib(identifierData)
 		if err != nil {
-			errResponse.ErrUnauthenticated(fmt.Sprintf("Unable to decompress data: %s", err))
+			errResponse.ErrXtremeUnauthenticated(fmt.Sprintf("Unable to decompress data: %s", err))
 		}
 
 		err = json.Unmarshal(identifierData, &data.Employee)
 		if err != nil {
-			errResponse.ErrUnauthenticated(fmt.Sprintf("Unable to decode data json: %s", err))
+			errResponse.ErrXtremeUnauthenticated(fmt.Sprintf("Unable to decode data json: %s", err))
 		}
 
 		next.ServeHTTP(w, r)

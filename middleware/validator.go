@@ -22,7 +22,7 @@ func (v Validator) Make(r *http.Request, rules interface{}) {
 			})
 		}
 
-		error.ErrValidation(attributes)
+		error.ErrXtremeValidation(attributes)
 	}
 }
 

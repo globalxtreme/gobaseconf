@@ -14,12 +14,12 @@ func PrepareRequestHandler(next http.Handler) http.Handler {
 		if strings.Contains(contentType, "multipart/form-data") {
 			err := r.ParseMultipartForm(32 << 20)
 			if err != nil {
-				error.ErrPayloadVeryLarge("")
+				error.ErrXtremePayloadVeryLarge("")
 			}
 		} else if contentType == "application/json" || contentType == "application/x-www-form-urlencoded" {
 			err := r.ParseForm()
 			if err != nil {
-				error.ErrBadRequest("Unable to parse form!")
+				error.ErrXtremeBadRequest("Unable to parse form!")
 			}
 
 			config.SetRequestBody(r)

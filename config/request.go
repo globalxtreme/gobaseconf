@@ -13,6 +13,6 @@ var (
 func SetRequestBody(r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&RequestBody)
 	if err != nil {
-		error.ErrBadRequest(err.Error())
+		error.ErrXtremeBadRequest(err.Error())
 	}
 }
