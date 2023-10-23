@@ -13,8 +13,9 @@ import (
 )
 
 type Uploader struct {
-	Path string
-	Name string
+	Path     string
+	Name     string
+	IsPublic bool
 }
 
 func (st Uploader) SetPath(path string) Uploader {
@@ -42,11 +43,16 @@ func (st Uploader) MoveFile(r *http.Request, param string) (any, error) {
 	}
 	defer file.Close()
 
-	helpers.CheckAndCreateDirectory(storagePath + "/" + st.Path)
+	path := st.Path
+	if st.IsPublic {
+		path = "public/" + path
+	}
+
+	helpers.CheckAndCreateDirectory(storagePath + "/" + path)
 
 	filename := st.Name + filepath.Ext(handler.Filename)
 
-	destinationFile, err := os.Create(strings.Replace(storagePath+"/"+st.Path+"/"+filename, "//", "/", -1))
+	destinationFile, err := os.Create(strings.Replace(storagePath+"/"+path+"/"+filename, "//", "/", -1))
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +73,12 @@ func (st Uploader) MoveContent(content string) (any, error) {
 		st.Name = helpers.RandomString(20)
 	}
 
-	helpers.CheckAndCreateDirectory(storagePath + "/" + st.Path)
+	path := st.Path
+	if st.IsPublic {
+		path = "public/" + path
+	}
+
+	helpers.CheckAndCreateDirectory(storagePath + "/" + path)
 
 	fileBytes, err := base64.StdEncoding.DecodeString(content)
 	if err != nil {
@@ -77,7 +88,7 @@ func (st Uploader) MoveContent(content string) (any, error) {
 	mime := mimetype.Detect(fileBytes)
 	st.Name = st.Name + mime.Extension()
 
-	err = ioutil.WriteFile(strings.Replace(storagePath+"/"+st.Path+"/"+st.Name, "//", "/", -1), fileBytes, 0777)
+	err = ioutil.WriteFile(strings.Replace(storagePath+"/"+path+"/"+st.Name, "//", "/", -1), fileBytes, 0777)
 	if err != nil {
 		return nil, err
 	}
