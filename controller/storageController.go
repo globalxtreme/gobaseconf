@@ -12,5 +12,5 @@ func (ctr BaseStorageController) ShowFile(w http.ResponseWriter, r *http.Request
 	vars := mux.Vars(r)
 
 	storage := filesystem.Storage{IsPublic: true}
-	storage.ShowFile(w, vars["path"])
+	storage.ShowFile(w, r, vars["path"])
 }
