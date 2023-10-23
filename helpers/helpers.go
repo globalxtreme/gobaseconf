@@ -34,3 +34,30 @@ func CheckAndCreateDirectory(path string) {
 		}
 	}
 }
+
+func SetStorageDir(path ...string) string {
+	storagePath := os.Getenv("STORAGE_DIR")
+	if len(storagePath) == 0 {
+		storagePath = "storages"
+	}
+
+	if len(path) > 0 {
+		storagePath += "/" + path[0]
+	}
+
+	return storagePath
+}
+
+func SetStorageAppDir(path ...string) string {
+	storagePath := os.Getenv("STORAGE_DIR")
+	if len(storagePath) == 0 {
+		storagePath = "storages"
+	}
+
+	storagePath += "/app"
+	if len(path) > 0 {
+		storagePath += "/" + path[0]
+	}
+
+	return storagePath
+}
