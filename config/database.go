@@ -2,9 +2,14 @@ package config
 
 import (
 	"fmt"
+	"github.com/globalxtreme/gobaseconf/helpers"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"log"
+	"os"
+	"time"
 )
 
 const POSTGRESQL_DRIVER = "pgsql"
@@ -53,7 +58,7 @@ func postgresqlConnection(conn DBConf) *gorm.DB {
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=%s",
 		conn.Host, conn.Username, conn.Password, conn.Database, conn.Port, conn.TimeZone)
-	driver, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	driver, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: setNewLogger()})
 	if err != nil {
 		panic(err)
 	}
@@ -90,10 +95,33 @@ func mysqlConnection(conn DBConf) *gorm.DB {
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s%s",
 		conn.Username, conn.Password, conn.Host, conn.Port, conn.Database, option)
-	driver, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	driver, err := gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: setNewLogger()})
 	if err != nil {
 		panic(err)
 	}
 
 	return driver
+}
+
+func setNewLogger() logger.Interface {
+	storageDir := os.Getenv("STORAGE_DIR") + "/logs"
+	helpers.CheckAndCreateDirectory(storageDir)
+
+	filename := time.Now().Format(helpers.DateLayout()) + ".log"
+	logFile, err := os.OpenFile(storageDir+"/"+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newLogger := logger.New(
+		log.New(logFile, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logger.Warn,
+			IgnoreRecordNotFoundError: false,
+			Colorful:                  false,
+		},
+	)
+
+	return newLogger
 }
