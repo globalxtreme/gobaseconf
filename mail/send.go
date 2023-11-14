@@ -20,15 +20,16 @@ func (m *Mail) Dial(conf config.MailConf) *Mail {
 	return m
 }
 
-func (m *Mail) Send(msg MailMessage) *Mail {
+func (m *Mail) Send(msg MailMessage) error {
 	content := msg.Message()
 	content.SetHeader("From", content.FormatAddress(os.Getenv("MAIL_FROM_ADDRESS"), os.Getenv("MAIL_FROM_NAME")))
 
 	if err := m.dialer.DialAndSend(content); err != nil {
 		xtremelog.Error(fmt.Sprintf("Error sending email: %v", err))
+		return err
 	}
 
-	return m
+	return nil
 }
 
 func mailPort(port string) int {
