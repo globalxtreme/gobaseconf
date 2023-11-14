@@ -1,0 +1,21 @@
+package helpers
+
+import (
+	"bytes"
+	"html/template"
+	"log"
+	"os"
+)
+
+func MailHTMLTemplate(path string, vars interface{}) string {
+	var buf bytes.Buffer
+
+	baseDir, _ := os.Getwd()
+
+	tmpl, err := template.ParseFiles(baseDir + "/Layout/Email/" + path)
+	if err != nil {
+		log.Fatalf("Error parsing template: %v", err)
+	}
+	tmpl.Execute(&buf, vars)
+	return buf.String()
+}
