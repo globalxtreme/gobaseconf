@@ -12,12 +12,14 @@ type Storage struct {
 }
 
 func (repo Storage) GetFullPath(path string) string {
-	if repo.IsPublic {
-		path = "public/" + path
-	}
-
 	baseDir, _ := os.Getwd()
-	storageDir := helpers.SetStorageDir(path)
+
+	var storageDir string
+	if repo.IsPublic {
+		storageDir = helpers.SetStorageAppPublicDir(path)
+	} else {
+		storageDir = helpers.SetStorageDir(path)
+	}
 
 	return baseDir + "/" + storageDir
 }
@@ -37,10 +39,12 @@ func (repo Storage) ShowFile(w http.ResponseWriter, r *http.Request, paths ...st
 	}
 
 	if repo.IsPublic {
-		path = "public/" + path
+		path = helpers.SetStorageAppPublicDir(path)
+	} else {
+		path = helpers.SetStorageDir(path)
 	}
 
-	realPath := checkAndSetDefaultFile(path)
+	realPath := checkPath(path)
 	if realPath == nil {
 		http.NotFound(w, r)
 		return
@@ -49,9 +53,7 @@ func (repo Storage) ShowFile(w http.ResponseWriter, r *http.Request, paths ...st
 	http.ServeFile(w, r, realPath.(string))
 }
 
-func checkAndSetDefaultFile(path string) any {
-	path = helpers.SetStorageAppDir(path)
-
+func checkPath(path string) any {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {

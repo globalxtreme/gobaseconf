@@ -49,15 +49,19 @@ func SetStorageDir(path ...string) string {
 }
 
 func SetStorageAppDir(path ...string) string {
-	storagePath := os.Getenv("STORAGE_DIR")
-	if len(storagePath) == 0 {
-		storagePath = "storages"
-	}
-
-	storagePath += "/app"
+	appDir := "app"
 	if len(path) > 0 {
-		storagePath += "/" + path[0]
+		appDir += "/" + path[0]
 	}
 
-	return storagePath
+	return SetStorageDir(appDir)
+}
+
+func SetStorageAppPublicDir(path ...string) string {
+	publicDir := "app/public"
+	if len(path) > 0 {
+		publicDir += "/" + path[0]
+	}
+
+	return SetStorageDir(publicDir)
 }

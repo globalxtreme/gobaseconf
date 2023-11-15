@@ -31,8 +31,6 @@ func (st Uploader) SetName(name string) Uploader {
 }
 
 func (st Uploader) MoveFile(r *http.Request, param string) (any, error) {
-	storagePath := helpers.SetStorageAppDir()
-
 	if len(st.Name) == 0 {
 		st.Name = helpers.RandomString(20)
 	}
@@ -43,16 +41,18 @@ func (st Uploader) MoveFile(r *http.Request, param string) (any, error) {
 	}
 	defer file.Close()
 
-	path := st.Path
+	var storagePath string
 	if st.IsPublic {
-		path = "public/" + path
+		storagePath = helpers.SetStorageAppPublicDir()
+	} else {
+		storagePath = helpers.SetStorageAppDir()
 	}
 
-	helpers.CheckAndCreateDirectory(storagePath + "/" + path)
+	helpers.CheckAndCreateDirectory(storagePath + "/" + st.Path)
 
 	filename := st.Name + filepath.Ext(handler.Filename)
 
-	destinationFile, err := os.Create(strings.Replace(storagePath+"/"+path+"/"+filename, "//", "/", -1))
+	destinationFile, err := os.Create(strings.Replace(storagePath+"/"+st.Path+"/"+filename, "//", "/", -1))
 	if err != nil {
 		return nil, err
 	}
@@ -67,18 +67,18 @@ func (st Uploader) MoveFile(r *http.Request, param string) (any, error) {
 }
 
 func (st Uploader) MoveContent(content string) (any, error) {
-	storagePath := helpers.SetStorageAppDir()
-
 	if len(st.Name) == 0 {
 		st.Name = helpers.RandomString(20)
 	}
 
-	path := st.Path
+	var storagePath string
 	if st.IsPublic {
-		path = "public/" + path
+		storagePath = helpers.SetStorageAppPublicDir()
+	} else {
+		storagePath = helpers.SetStorageAppDir()
 	}
 
-	helpers.CheckAndCreateDirectory(storagePath + "/" + path)
+	helpers.CheckAndCreateDirectory(storagePath + "/" + st.Path)
 
 	fileBytes, err := base64.StdEncoding.DecodeString(content)
 	if err != nil {
@@ -88,7 +88,7 @@ func (st Uploader) MoveContent(content string) (any, error) {
 	mime := mimetype.Detect(fileBytes)
 	st.Name = st.Name + mime.Extension()
 
-	err = ioutil.WriteFile(strings.Replace(storagePath+"/"+path+"/"+st.Name, "//", "/", -1), fileBytes, 0777)
+	err = ioutil.WriteFile(strings.Replace(storagePath+"/"+st.Path+"/"+st.Name, "//", "/", -1), fileBytes, 0777)
 	if err != nil {
 		return nil, err
 	}
