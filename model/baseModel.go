@@ -12,15 +12,7 @@ import (
 /* --- BASE MODEL CONFIGURATION --- */
 
 type BaseModel struct {
-	ID
-	DateTime
-}
-
-type ID struct {
-	ID uint `gorm:"primarykey"`
-}
-
-type DateTime struct {
+	ID        uint           `gorm:"primarykey"`
 	CreatedAt time.Time      `gorm:"column:createdAt;type:timestamp"`
 	UpdatedAt time.Time      `gorm:"column:updatedAt;type:timestamp"`
 	DeletedAt gorm.DeletedAt `gorm:"column:deletedAt;index"`
