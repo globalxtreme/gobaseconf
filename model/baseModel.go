@@ -118,3 +118,69 @@ func (j ArrayStringColumn) Value() (driver.Value, error) {
 
 	return json.Marshal(j)
 }
+
+type ArrayIntColumn []int
+
+func (j *ArrayIntColumn) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New(fmt.Sprint("Failed to unmarshal JSON value:", value))
+	}
+
+	var result []int
+	err := json.Unmarshal(bytes, &result)
+	*j = result
+	return err
+}
+
+func (j ArrayIntColumn) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return nil, nil
+	}
+
+	return json.Marshal(j)
+}
+
+type ArrayUintColumn []uint
+
+func (j *ArrayUintColumn) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New(fmt.Sprint("Failed to unmarshal JSON value:", value))
+	}
+
+	var result []uint
+	err := json.Unmarshal(bytes, &result)
+	*j = result
+	return err
+}
+
+func (j ArrayUintColumn) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return nil, nil
+	}
+
+	return json.Marshal(j)
+}
+
+type ArrayBoolColumn []bool
+
+func (j *ArrayBoolColumn) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New(fmt.Sprint("Failed to unmarshal JSON value:", value))
+	}
+
+	var result []bool
+	err := json.Unmarshal(bytes, &result)
+	*j = result
+	return err
+}
+
+func (j ArrayBoolColumn) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return nil, nil
+	}
+
+	return json.Marshal(j)
+}
