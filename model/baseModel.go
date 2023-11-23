@@ -19,13 +19,22 @@ type BaseModel struct {
 }
 
 func (m *BaseModel) BeforeCreate(tx *gorm.DB) error {
-	m.CreatedAt = time.Now()
-	m.UpdatedAt = time.Now()
+	if m.CreatedAt == (time.Time{}) {
+		m.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt == (time.Time{}) {
+		m.UpdatedAt = time.Now()
+	}
+
 	return nil
 }
 
 func (m *BaseModel) BeforeUpdate(tx *gorm.DB) error {
-	m.UpdatedAt = time.Now()
+	if m.UpdatedAt == (time.Time{}) {
+		m.UpdatedAt = time.Now()
+	}
+
 	return nil
 }
 
