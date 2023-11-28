@@ -1,7 +1,6 @@
 package console
 
 import (
-	"github.com/globalxtreme/gobaseconf/helpers"
 	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"os"
 	"strconv"
@@ -19,7 +18,7 @@ func (command DeleteLogFileCommand) Handle() {
 		logDays, _ = strconv.Atoi(logDaysEnv)
 	}
 
-	filename := time.Now().AddDate(0, 0, -logDays).Format(helpers.DateLayout()) + ".log"
+	filename := time.Now().AddDate(0, 0, -logDays).Format("2006-01-02") + ".log"
 	fullPath := storageDir + filename
 	xtremelog.Debug(fullPath)
 

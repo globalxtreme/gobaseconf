@@ -107,7 +107,7 @@ func setNewLogger() logger.Interface {
 	storageDir := os.Getenv("STORAGE_DIR") + "/logs"
 	helpers.CheckAndCreateDirectory(storageDir)
 
-	filename := time.Now().Format(helpers.DateLayout()) + ".log"
+	filename := time.Now().Format("2006-01-02") + ".log"
 	logFile, err := os.OpenFile(storageDir+"/"+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
