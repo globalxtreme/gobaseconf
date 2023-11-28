@@ -13,8 +13,6 @@ type Validator struct{}
 func (v Validator) Make(r *http.Request, rules interface{}) {
 	validate := validator.New()
 
-	_ = validate.RegisterValidation("date_ddmmyyyy", dateDDMMYYYYValidation)
-
 	err := validate.Struct(rules)
 	if err != nil {
 		var attributes []interface{}
@@ -27,6 +25,16 @@ func (v Validator) Make(r *http.Request, rules interface{}) {
 
 		error.ErrXtremeValidation(attributes)
 	}
+}
+
+func (v Validator) RegisterValidation(callback func(validate *validator.Validate)) {
+	validate := validator.New()
+
+	_ = validate.RegisterValidation("date_ddmmyyyy", dateDDMMYYYYValidation)
+	_ = validate.RegisterValidation("time_hhmm", dateHHMMValidation)
+	_ = validate.RegisterValidation("time_hhmmss", dateHHMMSSValidation)
+
+	callback(validate)
 }
 
 func getMessage(errMsg string) string {
@@ -43,5 +51,15 @@ func getMessage(errMsg string) string {
 
 func dateDDMMYYYYValidation(fl validator.FieldLevel) bool {
 	_, err := time.Parse("02/01/2006", fl.Field().String())
+	return err == nil
+}
+
+func dateHHMMValidation(fl validator.FieldLevel) bool {
+	_, err := time.Parse("15:04", fl.Field().String())
+	return err == nil
+}
+
+func dateHHMMSSValidation(fl validator.FieldLevel) bool {
+	_, err := time.Parse("15:04:05", fl.Field().String())
 	return err == nil
 }
