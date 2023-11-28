@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"github.com/globalxtreme/gobaseconf/config"
 	"github.com/globalxtreme/gobaseconf/response/error"
 	"github.com/go-playground/validator/v10"
 	"net/http"
@@ -11,9 +12,7 @@ import (
 type Validator struct{}
 
 func (v Validator) Make(r *http.Request, rules interface{}) {
-	validate := validator.New()
-
-	err := validate.Struct(rules)
+	err := config.XtremeValidate.Struct(rules)
 	if err != nil {
 		var attributes []interface{}
 		for _, e := range err.(validator.ValidationErrors) {
@@ -28,13 +27,13 @@ func (v Validator) Make(r *http.Request, rules interface{}) {
 }
 
 func (v Validator) RegisterValidation(callback func(validate *validator.Validate)) {
-	validate := validator.New()
+	config.XtremeValidate = validator.New()
 
-	_ = validate.RegisterValidation("date_ddmmyyyy", dateDDMMYYYYValidation)
-	_ = validate.RegisterValidation("time_hhmm", dateHHMMValidation)
-	_ = validate.RegisterValidation("time_hhmmss", dateHHMMSSValidation)
+	_ = config.XtremeValidate.RegisterValidation("date_ddmmyyyy", dateDDMMYYYYValidation)
+	_ = config.XtremeValidate.RegisterValidation("time_hhmm", dateHHMMValidation)
+	_ = config.XtremeValidate.RegisterValidation("time_hhmmss", dateHHMMSSValidation)
 
-	callback(validate)
+	callback(config.XtremeValidate)
 }
 
 func getMessage(errMsg string) string {
