@@ -8,11 +8,15 @@ import (
 )
 
 func FullDateTimeLayout() string {
-	return "2006-01-02 15:04:05"
+	return "02/01/2006 15:04:05"
 }
 
 func DateLayout() string {
-	return "2006-01-02"
+	return "02/01/2006"
+}
+
+func TimeLayout() string {
+	return "15:04:05"
 }
 
 func RandomString(length int) string {

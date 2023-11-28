@@ -5,12 +5,15 @@ import (
 	"github.com/go-playground/validator/v10"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Validator struct{}
 
 func (v Validator) Make(r *http.Request, rules interface{}) {
 	validate := validator.New()
+
+	_ = validate.RegisterValidation("date_ddmmyyyy", dateDDMMYYYYValidation)
 
 	err := validate.Struct(rules)
 	if err != nil {
@@ -36,4 +39,9 @@ func getMessage(errMsg string) string {
 	}
 
 	return splitMsg[key]
+}
+
+func dateDDMMYYYYValidation(fl validator.FieldLevel) bool {
+	_, err := time.Parse("02/01/2006", fl.Field().String())
+	return err == nil
 }
