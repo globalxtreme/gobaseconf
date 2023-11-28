@@ -11,6 +11,7 @@ var (
 )
 
 func SetRequestBody(r *http.Request) {
+	RequestBody = make(map[string]interface{})
 	err := json.NewDecoder(r.Body).Decode(&RequestBody)
 	if err != nil {
 		error.ErrXtremeBadRequest(err.Error())
