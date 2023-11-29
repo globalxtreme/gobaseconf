@@ -49,16 +49,31 @@ func getMessage(errMsg string) string {
 }
 
 func dateDDMMYYYYValidation(fl validator.FieldLevel) bool {
-	_, err := time.Parse("02/01/2006", fl.Field().String())
+	field := fl.Field().String()
+	if field == "" {
+		return true
+	}
+
+	_, err := time.Parse("02/01/2006", field)
 	return err == nil
 }
 
 func dateHHMMValidation(fl validator.FieldLevel) bool {
-	_, err := time.Parse("15:04", fl.Field().String())
+	field := fl.Field().String()
+	if field == "" {
+		return true
+	}
+
+	_, err := time.Parse("15:04", field)
 	return err == nil
 }
 
 func dateHHMMSSValidation(fl validator.FieldLevel) bool {
-	_, err := time.Parse("15:04:05", fl.Field().String())
+	field := fl.Field().String()
+	if field == "" {
+		return true
+	}
+
+	_, err := time.Parse("15:04:05", field)
 	return err == nil
 }
