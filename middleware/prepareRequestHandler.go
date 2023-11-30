@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"github.com/globalxtreme/gobaseconf/config"
 	"github.com/globalxtreme/gobaseconf/response/error"
 	"net/http"
 	"strings"
@@ -21,8 +20,6 @@ func PrepareRequestHandler(next http.Handler) http.Handler {
 			if err != nil {
 				error.ErrXtremeBadRequest("Unable to parse form!")
 			}
-
-			config.SetRequestBody(r)
 		}
 		next.ServeHTTP(w, r)
 	})
