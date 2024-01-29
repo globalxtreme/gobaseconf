@@ -5,6 +5,7 @@ import (
 	"github.com/globalxtreme/gobaseconf/helpers"
 	"log"
 	"os"
+	"runtime/debug"
 	"time"
 )
 
@@ -17,7 +18,10 @@ func Error(content any) {
 }
 
 func Debug(content any) {
-	setOutput("DEBUG", content)
+	debug.PrintStack()
+
+	setOutput("ERROR", fmt.Sprintf("panic: %v", content))
+	setOutput("ERROR", string(debug.Stack()))
 }
 
 func setOutput(action string, error any) {

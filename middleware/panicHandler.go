@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/globalxtreme/gobaseconf/response"
 	"log"
 	"net/http"
+	"os"
 )
 
 func PanicHandler(next http.Handler) http.Handler {
@@ -13,6 +15,8 @@ func PanicHandler(next http.Handler) http.Handler {
 		defer func() {
 			if r := recover(); r != nil {
 				w.Header().Set("Content-Type", "application/json")
+
+				fmt.Fprintf(os.Stderr, "panic: %v\n", r)
 				xtremelog.Error(r)
 
 				var res *response.ResponseError
