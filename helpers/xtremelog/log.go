@@ -14,14 +14,14 @@ func Info(content any) {
 }
 
 func Error(content any) {
-	setOutput("ERROR", content)
-}
-
-func Debug(content any) {
 	debug.PrintStack()
 
 	setOutput("ERROR", fmt.Sprintf("panic: %v", content))
 	setOutput("ERROR", string(debug.Stack()))
+}
+
+func Debug(content any) {
+	setOutput("DEBUG", content)
 }
 
 func setOutput(action string, error any) {
