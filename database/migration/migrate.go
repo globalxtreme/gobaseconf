@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"fmt"
 	"github.com/globalxtreme/gobaseconf/config"
 	"gorm.io/gorm"
 	"log"
@@ -27,7 +28,7 @@ func Migrate(tables []Table, columns []Column) {
 				}
 
 				if len(table.Owner) > 0 {
-					err = table.Connection.Exec("ALTER TABLE ? OWNER TO ?", table.CreateTable.TableName(), table.Owner).Error
+					err = table.Connection.Exec(fmt.Sprintf("ALTER TABLE %s OWNER TO %s", table.CreateTable.TableName(), table.Owner)).Error
 					if err != nil {
 						log.Panicf("CHANGE OWNER: %v", err)
 					}
