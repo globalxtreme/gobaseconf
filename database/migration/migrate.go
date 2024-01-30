@@ -25,6 +25,13 @@ func Migrate(tables []Table, columns []Column) {
 				if err != nil {
 					log.Panicf("CREATE CREATE: %v", err)
 				}
+
+				if len(table.Owner) > 0 {
+					err = table.Connection.Exec("ALTER TABLE ? OWNER TO ?", table.CreateTable.TableName(), table.Owner).Error
+					if err != nil {
+						log.Panicf("CHANGE OWNER: %v", err)
+					}
+				}
 			}
 		}
 

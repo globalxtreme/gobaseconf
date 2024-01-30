@@ -22,6 +22,7 @@ type DBConf struct {
 	Driver    string
 	Host      string
 	Port      any
+	Owner     string
 	Username  string
 	Password  string
 	Database  string

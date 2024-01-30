@@ -11,6 +11,7 @@ type Table struct {
 	RenameTable Rename
 	DropTable   string
 	Collate     string
+	Owner       string
 }
 
 type Column struct {
