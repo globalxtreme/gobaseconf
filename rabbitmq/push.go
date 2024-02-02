@@ -73,7 +73,7 @@ func (mq *RabbitMQ) setupMessage() *RabbitMQ {
 		ContentType:   "application/json",
 	}
 
-	if message.ID.ID == 0 {
+	if message.ID == 0 {
 		message.Statuses = make(baseModel.MapBoolColumn)
 		for _, queue := range mq.Queues {
 			message.Statuses[queue] = false
@@ -94,7 +94,7 @@ func (mq *RabbitMQ) setupMessage() *RabbitMQ {
 
 		err := conf.RabbitMQSQL.Create(&message).Error
 		if err == nil {
-			msgContent["messageId"] = message.ID.ID
+			msgContent["messageId"] = message.ID
 			payload["body"] = msgContent
 
 			message.Payload = payload
