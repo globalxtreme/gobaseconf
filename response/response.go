@@ -11,7 +11,7 @@ type Response struct {
 	Pagination *any
 }
 
-func (res Response) Success(w http.ResponseWriter) {
+func (res Response) Success(w http.ResponseWriter, args ...string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -20,10 +20,15 @@ func (res Response) Success(w http.ResponseWriter) {
 		result = res.Array
 	}
 
+	internalMsg := ""
+	if len(args) > 0 {
+		internalMsg = args[0]
+	}
+
 	status := Status{
 		Code:        http.StatusOK,
 		Message:     "Success",
-		InternalMsg: "",
+		InternalMsg: internalMsg,
 		Attributes:  nil,
 	}
 
