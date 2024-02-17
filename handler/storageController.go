@@ -1,4 +1,4 @@
-package controller
+package handler
 
 import (
 	"github.com/globalxtreme/gobaseconf/filesystem"
@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-type BaseStorageController struct{}
+type BaseStorageHandler struct{}
 
-func (ctr BaseStorageController) ShowFile(w http.ResponseWriter, r *http.Request) {
+func (ctr BaseStorageHandler) ShowFile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	storage := filesystem.Storage{IsPublic: true}

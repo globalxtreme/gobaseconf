@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/globalxtreme/gobaseconf/controller"
+	"github.com/globalxtreme/gobaseconf/handler"
 	"github.com/globalxtreme/gobaseconf/middleware"
 	"github.com/gorilla/mux"
 )
@@ -13,8 +13,8 @@ func RegisterRouter(router *mux.Router, callback CallbackRouter) {
 	router.Use(middleware.PrepareRequestHandler)
 
 	// Storage route
-	stController := controller.BaseStorageController{}
-	router.HandleFunc("/storages/{path:.*}", stController.ShowFile).Methods("GET")
+	stHandler := handler.BaseStorageHandler{}
+	router.HandleFunc("/storages/{path:.*}", stHandler.ShowFile).Methods("GET")
 
 	callback(router)
 }
