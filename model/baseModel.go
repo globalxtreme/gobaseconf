@@ -30,6 +30,18 @@ func (m *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+func (m *BaseModel) BeforeSave(tx *gorm.DB) error {
+	if m.CreatedAt == (time.Time{}) {
+		m.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt == (time.Time{}) {
+		m.UpdatedAt = time.Now()
+	}
+
+	return nil
+}
+
 func (m *BaseModel) BeforeUpdate(tx *gorm.DB) error {
 	if m.UpdatedAt == (time.Time{}) {
 		m.UpdatedAt = time.Now()

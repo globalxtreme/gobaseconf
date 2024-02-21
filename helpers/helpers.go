@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -68,4 +69,25 @@ func SetStorageAppPublicDir(path ...string) string {
 	}
 
 	return SetStorageDir(publicDir)
+}
+
+func StringToArrayInt(text string) []int {
+	var array []int
+	texts := strings.Split(text, ",")
+	for _, value := range texts {
+		item, _ := strconv.Atoi(value)
+		array = append(array, item)
+	}
+
+	return array
+}
+
+func StringToArrayString(text string) []string {
+	var array []string
+	texts := strings.Split(text, ",")
+	for _, value := range texts {
+		array = append(array, value)
+	}
+
+	return array
 }
