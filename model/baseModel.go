@@ -1,42 +1,57 @@
-package model
+package Model
 
 import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"os"
 	"time"
 )
 
 /* --- BASE MODEL CONFIGURATION --- */
 
 type BaseModel struct {
-	ID        uint           `gorm:"primarykey"`
+	ID        string         `gorm:"type:varchar(45);primarykey"`
+	Timezone  string         `gorm:"column:timezone;type:varchar(50)"`
 	CreatedAt time.Time      `gorm:"column:createdAt;type:timestamp"`
 	UpdatedAt time.Time      `gorm:"column:updatedAt;type:timestamp"`
 	DeletedAt gorm.DeletedAt `gorm:"column:deletedAt;index"`
 }
 
 func (m *BaseModel) BeforeCreate(tx *gorm.DB) error {
+	m.setID()
+
 	if m.CreatedAt == (time.Time{}) {
 		m.CreatedAt = time.Now()
 	}
 
 	if m.UpdatedAt == (time.Time{}) {
 		m.UpdatedAt = time.Now()
+	}
+
+	if len(m.Timezone) == 0 {
+		m.Timezone = m.CreatedAt.Location().String()
 	}
 
 	return nil
 }
 
 func (m *BaseModel) BeforeSave(tx *gorm.DB) error {
+	m.setID()
+
 	if m.CreatedAt == (time.Time{}) {
 		m.CreatedAt = time.Now()
 	}
 
 	if m.UpdatedAt == (time.Time{}) {
 		m.UpdatedAt = time.Now()
+	}
+
+	if len(m.Timezone) == 0 {
+		m.Timezone = m.CreatedAt.Location().String()
 	}
 
 	return nil
@@ -48,6 +63,17 @@ func (m *BaseModel) BeforeUpdate(tx *gorm.DB) error {
 	}
 
 	return nil
+}
+
+func (m *BaseModel) setID() {
+	if len(m.ID) == 0 {
+		uniqueId := os.Getenv("UNIQUE_ID")
+		if len(uniqueId) == 0 {
+			uniqueId = "127001"
+		}
+
+		m.ID = fmt.Sprintf("%s-%s", uniqueId, uuid.New().String())
+	}
 }
 
 /* --- COLUMN TYPE CONFIGURATION: OBJECT / MAP IN ARRAY --- */
