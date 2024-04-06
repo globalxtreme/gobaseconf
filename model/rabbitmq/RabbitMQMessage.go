@@ -5,7 +5,7 @@ import (
 )
 
 type RabbitMQMessage struct {
-	model.BaseModel
+	model.RabbitMQBaseModel
 	Exchange       string                   `gorm:"column:exchange;type:varchar(250);not null"`
 	Key            string                   `gorm:"column:key;type:varchar(250);not null"`
 	QueueSender    string                   `gorm:"column:queueSender;type:varchar(250);not null"`

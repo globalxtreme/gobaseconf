@@ -3,7 +3,7 @@ package model
 import "github.com/globalxtreme/gobaseconf/model"
 
 type RabbitMQMessageFailed struct {
-	model.BaseModel
+	model.RabbitMQBaseModel
 	MessageId uint                     `gorm:"column:messageId;type:bigint;not null"`
 	Sender    string                   `gorm:"column:sender;type:varchar(250);not null"`
 	Consumer  string                   `gorm:"column:consumer;type:varchar(250);not null"`
