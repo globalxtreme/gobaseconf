@@ -1,6 +1,7 @@
 package console
 
 import (
+	"github.com/globalxtreme/gobaseconf/config"
 	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/spf13/cobra"
 	"os"
@@ -15,6 +16,8 @@ func (command *DeleteLogFileCommand) Command(cmd *cobra.Command) {
 		Use:  "delete-log-file",
 		Long: "Delete log file command",
 		Run: func(cmd *cobra.Command, args []string) {
+			config.InitDevMode()
+
 			command.Handle()
 		},
 	})

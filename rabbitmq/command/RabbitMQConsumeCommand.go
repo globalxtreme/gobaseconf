@@ -30,6 +30,8 @@ func (class *RabbitMQConsumeCommand) Command(cmd *cobra.Command) {
 		Use:  "rabbitmq-consume",
 		Long: "RabbitMQ Consumer Command",
 		Run: func(cmd *cobra.Command, args []string) {
+			conf.InitDevMode()
+
 			class.Handle()
 		},
 	})
