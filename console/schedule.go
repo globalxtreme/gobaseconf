@@ -11,7 +11,7 @@ func Schedules(callback callbackFunc) {
 	sch := gocron.NewScheduler(time.UTC)
 
 	// Schedules
-	addSchedule(sch.Every(1).Day().At("00:01"), DeleteLogFileCommand{})
+	addSchedule(sch.Every(1).Day().At("00:01"), &DeleteLogFileCommand{})
 	callback(sch)
 
 	sch.StartBlocking()

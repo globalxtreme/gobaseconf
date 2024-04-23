@@ -2,6 +2,7 @@ package console
 
 import (
 	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
+	"github.com/spf13/cobra"
 	"os"
 	"strconv"
 	"time"
@@ -9,7 +10,17 @@ import (
 
 type DeleteLogFileCommand struct{}
 
-func (command DeleteLogFileCommand) Handle() {
+func (command *DeleteLogFileCommand) Command(cmd *cobra.Command) {
+	cmd.AddCommand(&cobra.Command{
+		Use:  "delete-log-file",
+		Long: "Delete log file command",
+		Run: func(cmd *cobra.Command, args []string) {
+			command.Handle()
+		},
+	})
+}
+
+func (command *DeleteLogFileCommand) Handle() {
 	storageDir := os.Getenv("STORAGE_DIR") + "/logs/"
 
 	logDays := 14

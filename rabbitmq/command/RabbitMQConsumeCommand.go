@@ -8,6 +8,7 @@ import (
 	model "github.com/globalxtreme/gobaseconf/model/rabbitmq"
 	"github.com/globalxtreme/gobaseconf/rabbitmq"
 	"github.com/rabbitmq/amqp091-go"
+	"github.com/spf13/cobra"
 	"log"
 	"time"
 )
@@ -22,6 +23,16 @@ type rabbitmqbody struct {
 	Exchange  string `json:"exchange"`
 	Queue     string `json:"queue"`
 	Key       string `json:"key"`
+}
+
+func (class *RabbitMQConsumeCommand) Command(cmd *cobra.Command) {
+	cmd.AddCommand(&cobra.Command{
+		Use:  "rabbitmq-consume",
+		Long: "RabbitMQ Consumer Command",
+		Run: func(cmd *cobra.Command, args []string) {
+			class.Handle()
+		},
+	})
 }
 
 func (class *RabbitMQConsumeCommand) Handle() {
