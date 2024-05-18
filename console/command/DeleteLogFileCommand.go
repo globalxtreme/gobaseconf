@@ -1,4 +1,4 @@
-package console
+package command
 
 import (
 	"github.com/globalxtreme/gobaseconf/config"

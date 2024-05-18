@@ -1,6 +1,7 @@
 package console
 
 import (
+	"github.com/globalxtreme/gobaseconf/console/command"
 	"github.com/go-co-op/gocron"
 	"time"
 )
@@ -11,7 +12,7 @@ func Schedules(callback callbackFunc) {
 	sch := gocron.NewScheduler(time.UTC)
 
 	// Schedules
-	addSchedule(sch.Every(1).Day().At("00:01"), &DeleteLogFileCommand{})
+	addSchedule(sch.Every(1).Day().At("00:01"), &command.DeleteLogFileCommand{})
 	callback(sch)
 
 	sch.StartBlocking()
