@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	"os"
 	"time"
 )
@@ -73,6 +74,37 @@ func (m *BaseModel) setID() {
 		}
 
 		m.ID = fmt.Sprintf("%s-%s", uniqueId, uuid.New().String())
+	}
+}
+
+/* --- COLUMN TYPE CONFIGURATION: TIME --- */
+
+type TimeColumn struct {
+	time.Time
+}
+
+func (timeColumn *TimeColumn) Scan(value interface{}) error {
+	scannedTime, err := time.Parse("15:04:05", value.(string))
+	if err == nil {
+		*timeColumn = TimeColumn{scannedTime}
+	}
+
+	return err
+}
+
+func (TimeColumn) GormDataType() string {
+	return "time"
+}
+
+func (TimeColumn) GormDBDataType(db *gorm.DB, field *schema.Field) string {
+	return "time"
+}
+
+func (timeColumn TimeColumn) Value() (driver.Value, error) {
+	if !timeColumn.IsZero() {
+		return timeColumn.Time.Format("15:04:05"), nil
+	} else {
+		return nil, nil
 	}
 }
 
