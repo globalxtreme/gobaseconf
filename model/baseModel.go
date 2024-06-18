@@ -41,8 +41,6 @@ func (m *BaseModel) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (m *BaseModel) BeforeSave(tx *gorm.DB) error {
-	m.setID()
-
 	if m.CreatedAt == (time.Time{}) {
 		m.CreatedAt = time.Now()
 	}
@@ -75,6 +73,55 @@ func (m *BaseModel) setID() {
 
 		m.ID = fmt.Sprintf("%s-%s", uniqueId, uuid.New().String())
 	}
+}
+
+/* --- BASE MODEL WITHOUT ID CONFIGURATION --- */
+
+type BaseModelWithoutID struct {
+	Timezone  string         `gorm:"column:timezone;type:varchar(50)"`
+	CreatedAt time.Time      `gorm:"column:createdAt;type:timestamp"`
+	UpdatedAt time.Time      `gorm:"column:updatedAt;type:timestamp"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deletedAt;index"`
+}
+
+func (m *BaseModelWithoutID) BeforeCreate(tx *gorm.DB) error {
+	if m.CreatedAt == (time.Time{}) {
+		m.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt == (time.Time{}) {
+		m.UpdatedAt = time.Now()
+	}
+
+	if len(m.Timezone) == 0 {
+		m.Timezone = m.CreatedAt.Location().String()
+	}
+
+	return nil
+}
+
+func (m *BaseModelWithoutID) BeforeSave(tx *gorm.DB) error {
+	if m.CreatedAt == (time.Time{}) {
+		m.CreatedAt = time.Now()
+	}
+
+	if m.UpdatedAt == (time.Time{}) {
+		m.UpdatedAt = time.Now()
+	}
+
+	if len(m.Timezone) == 0 {
+		m.Timezone = m.CreatedAt.Location().String()
+	}
+
+	return nil
+}
+
+func (m *BaseModelWithoutID) BeforeUpdate(tx *gorm.DB) error {
+	if m.UpdatedAt == (time.Time{}) {
+		m.UpdatedAt = time.Now()
+	}
+
+	return nil
 }
 
 /* --- COLUMN TYPE CONFIGURATION: TIME --- */
