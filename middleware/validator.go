@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type Validator struct{}
@@ -16,8 +17,16 @@ func (v Validator) Make(r *http.Request, rules interface{}) {
 	if err != nil {
 		var attributes []interface{}
 		for _, e := range err.(validator.ValidationErrors) {
+			key := e.Field()
+			if key != "" {
+				runes := []rune(key)
+				runes[0] = unicode.ToLower(runes[0])
+
+				key = string(runes)
+			}
+
 			attributes = append(attributes, map[string]interface{}{
-				"param":   e.Field(),
+				"param":   key,
 				"message": getMessage(e.Error()),
 			})
 		}
