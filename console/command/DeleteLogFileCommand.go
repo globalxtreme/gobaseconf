@@ -34,7 +34,6 @@ func (command *DeleteLogFileCommand) Handle() {
 
 	filename := time.Now().AddDate(0, 0, -logDays).Format("2006-01-02") + ".log"
 	fullPath := storageDir + filename
-	xtremelog.Debug(fullPath)
 
 	_, err := os.Stat(fullPath)
 	if err == nil {
