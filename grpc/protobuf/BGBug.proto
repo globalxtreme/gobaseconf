@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Bug;
+package bug;
 
 option go_package = "grpc/pkg/bug";
 

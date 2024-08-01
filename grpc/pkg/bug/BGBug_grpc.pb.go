@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BugService_Log_FullMethodName = "/Bug.BugService/Log"
+	BugService_Log_FullMethodName = "/bug.BugService/Log"
 )
 
 // BugServiceClient is the client API for BugService service.
@@ -96,7 +96,7 @@ func _BugService_Log_Handler(srv interface{}, ctx context.Context, dec func(inte
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var BugService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Bug.BugService",
+	ServiceName: "bug.BugService",
 	HandlerType: (*BugServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
