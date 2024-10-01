@@ -5,6 +5,12 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+type Migration interface {
+	Reference() string
+	Tables() []Table
+	Columns() []Column
+}
+
 type Table struct {
 	Connection  *gorm.DB
 	CreateTable schema.Tabler
