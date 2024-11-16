@@ -1,10 +1,11 @@
 package xtremelog
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/globalxtreme/gobaseconf/grpc/client"
-	"github.com/globalxtreme/gobaseconf/grpc/pkg/bug"
+	log2 "github.com/globalxtreme/gobaseconf/grpc/pkg/log"
 	"github.com/globalxtreme/gobaseconf/helpers"
 	"log"
 	"os"
@@ -14,29 +15,30 @@ import (
 
 func Info(content any) {
 	logType := "INFO"
-	if client.BugRPCActive {
+	if client.LogRPCActive {
 		message, _ := json.Marshal(content)
 
-		client.BugLog(&bug.LogRequest{
+		SendBugLog(&log2.LogRequest{
 			Service: os.Getenv("SERVICE"),
 			Type:    logType,
-			Message: message,
+			Message: string(message),
 		})
 	} else {
 		setOutput(logType, content)
 	}
 }
 
-func Error(content any) {
+func Error(content any, bug bool) {
 	debug.PrintStack()
 
 	logType := "ERROR"
-	if client.BugRPCActive {
-		client.BugLog(&bug.LogRequest{
+	if client.LogRPCActive {
+		SendBugLog(&log2.LogRequest{
 			Service: os.Getenv("SERVICE"),
 			Type:    logType,
-			Title:   fmt.Sprintf("panic: %v", content),
-			Message: debug.Stack(),
+			Message: fmt.Sprintf("panic: %v", content),
+			Stack:   debug.Stack(),
+			Bug:     bug,
 		})
 	} else {
 		setOutput("ERROR", fmt.Sprintf("panic: %v", content))
@@ -46,17 +48,24 @@ func Error(content any) {
 
 func Debug(content any) {
 	logType := "DEBUG"
-	if client.BugRPCActive {
+	if client.LogRPCActive {
 		message, _ := json.Marshal(content)
 
-		client.BugLog(&bug.LogRequest{
+		SendBugLog(&log2.LogRequest{
 			Service: os.Getenv("SERVICE"),
 			Type:    logType,
-			Message: message,
+			Message: string(message),
 		})
 	} else {
 		setOutput("DEBUG", content)
 	}
+}
+
+func SendBugLog(req *log2.LogRequest) (*log2.LGResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), client.LogRPCTimeout)
+	defer cancel()
+
+	return client.LogRPCClient.Log(ctx, req)
 }
 
 func setOutput(action string, error any) {

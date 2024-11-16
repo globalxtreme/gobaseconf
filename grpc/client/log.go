@@ -3,21 +3,28 @@ package client
 import (
 	"context"
 	"github.com/globalxtreme/gobaseconf/config"
-	"github.com/globalxtreme/gobaseconf/grpc/pkg/bug"
+	log2 "github.com/globalxtreme/gobaseconf/grpc/pkg/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
 var (
-	BugRPCClient bug.BugServiceClient
-	BugRPCActive bool
+	// LogRPCClient --> Log service gRPC client
+	LogRPCClient log2.LogServiceClient
+
+	// LogRPCTimeout --> Log service gRPC timeout while send log
+	LogRPCTimeout time.Duration
+
+	// LogRPCActive --> Log service gRPC status active or inactive
+	LogRPCActive bool
 )
 
-func InitBugRPC() func() {
-	addr := os.Getenv("GRPC_BUG_HOST")
+func InitLogRPC() func() {
+	addr := os.Getenv("GRPC_LOG_HOST")
 	if !config.DevMode && addr != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
@@ -36,8 +43,15 @@ func InitBugRPC() func() {
 			log.Panicf("Did not connect to %s: %v", addr, err)
 		}
 
-		BugRPCClient = bug.NewBugServiceClient(conn)
-		BugRPCActive = true
+		LogRPCClient = log2.NewLogServiceClient(conn)
+		LogRPCActive = true
+
+		LogRPCTimeout = 5 * time.Second
+		if bugTimeoutENV := os.Getenv("GRPC_LOG_TIMEOUT"); bugTimeoutENV != "" {
+			bugTimeoutENVInt, _ := strconv.Atoi(bugTimeoutENV)
+
+			LogRPCTimeout = time.Duration(bugTimeoutENVInt) * time.Second
+		}
 
 		cleanup := func() {
 			cancel()
@@ -48,11 +62,4 @@ func InitBugRPC() func() {
 	}
 
 	return func() {}
-}
-
-func BugLog(req *bug.LogRequest) (*bug.BGResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	return BugRPCClient.Log(ctx, req)
 }
