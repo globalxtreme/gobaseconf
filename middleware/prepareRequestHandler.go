@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/globalxtreme/gobaseconf/response/error"
 	"net/http"
 	"strings"
@@ -8,8 +9,11 @@ import (
 
 func PrepareRequestHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		contentType := r.Header.Get("Content-Type")
+		if muxURL := r.URL; muxURL != nil && muxURL.Path != "" {
+			xtremelog.Info(muxURL.Path)
+		}
 
+		contentType := r.Header.Get("Content-Type")
 		if strings.Contains(contentType, "multipart/form-data") {
 			err := r.ParseMultipartForm(32 << 20)
 			if err != nil {
@@ -21,6 +25,7 @@ func PrepareRequestHandler(next http.Handler) http.Handler {
 				error.ErrXtremeBadRequest("Unable to parse form!")
 			}
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
