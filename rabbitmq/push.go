@@ -3,24 +3,27 @@ package rabbitmq
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	conf "github.com/globalxtreme/gobaseconf/config"
-	baseModel "github.com/globalxtreme/gobaseconf/model"
-	model "github.com/globalxtreme/gobaseconf/model/rabbitmq"
+	rabbitmqmodel "github.com/globalxtreme/gobaseconf/model/rabbitmq"
 	"github.com/rabbitmq/amqp091-go"
 	"log"
+	"os"
 	"os/exec"
+	"time"
 )
 
 type RabbitMQ struct {
+	Connection string
+	Exchange   string
+	Queue      string
 	Data       interface{}
-	Queues     []string
-	Key        string
 	MessageId  *int
-	Body       interface{}
-	Properties publishingProperties
 	SenderId   *uint
 	SenderType *string
+	Timeout    *time.Duration
+
+	service    string
+	body       interface{}
+	properties publishingProperties
 }
 
 type publishingProperties struct {
@@ -29,95 +32,110 @@ type publishingProperties struct {
 	ContentType   string
 }
 
-func (mq *RabbitMQ) OnQueue(queue string) *RabbitMQ {
-	mq.Queues = append(mq.Queues, queue)
+func (mq *RabbitMQ) OnConnection(connection string) *RabbitMQ {
+	mq.Connection = connection
 
 	return mq
 }
 
-func (mq *RabbitMQ) OnSender(sId uint, sType string) *RabbitMQ {
-	mq.SenderId = &sId
-	mq.SenderType = &sType
+func (mq *RabbitMQ) OnExchange(exchange string) *RabbitMQ {
+	mq.Exchange = exchange
+
+	return mq
+}
+
+func (mq *RabbitMQ) OnQueue(queue string) *RabbitMQ {
+	mq.Queue = queue
+
+	return mq
+}
+
+func (mq *RabbitMQ) OnSender(senderId uint, senderType string) *RabbitMQ {
+	mq.SenderId = &senderId
+	mq.SenderType = &senderType
+
+	return mq
+}
+
+func (mq *RabbitMQ) WithTimeout(duration time.Duration) *RabbitMQ {
+	mq.Timeout = &duration
 
 	return mq
 }
 
 func (mq *RabbitMQ) Push() {
+	mq.service = os.Getenv("SERVICE")
+
 	mq.setupMessage()
 	mq.publishMessage()
 }
 
 func (mq *RabbitMQ) setupMessage() *RabbitMQ {
-	config := conf.RabbitMQConf
-	exchange := config.Exchange
+	mqConnection, ok := RabbitMQConnectionCache[mq.Connection]
+	if !ok {
+		if len(RabbitMQConnectionCache) == 0 {
+			RabbitMQConnectionCache = make(map[string]rabbitmqmodel.RabbitMQConnection)
+		}
 
-	var message model.RabbitMQMessage
+		mqConnQuery := RabbitMQSQL.Where("connection = ?", mq.Connection)
+		if mq.Connection == RABBITMQ_CONNECTION_LOCAL {
+			mqConnQuery = mqConnQuery.Where("service = ?", mq.service)
+		}
 
+		err := mqConnQuery.First(&mqConnection).Error
+		if err != nil || mqConnection.ID == 0 {
+			log.Panicf("Data connection does not exists: %s", err)
+		}
+
+		RabbitMQConnectionCache[mq.Connection] = mqConnection
+	}
+
+	var message rabbitmqmodel.RabbitMQMessage
 	if mq.MessageId != nil {
-		conf.RabbitMQSQL.First(&message, mq.MessageId)
+		RabbitMQSQL.First(&message, mq.MessageId)
 	}
 
 	correlationId, _ := exec.Command("uuidgen").Output()
-
-	msgContent := map[string]interface{}{
-		"key":       mq.Key,
-		"exchange":  exchange.Name,
-		"queue":     config.Queue,
-		"message":   mq.Data,
-		"messageId": mq.MessageId,
-	}
-
-	mq.Properties = publishingProperties{
+	mq.properties = publishingProperties{
 		CorrelationId: string(correlationId),
 		DeliveryMode:  amqp091.Persistent,
 		ContentType:   "application/json",
 	}
 
+	payload := map[string]interface{}{
+		"data":      mq.Data,
+		"messageId": mq.MessageId,
+	}
+
 	if message.ID == 0 {
-		message.Statuses = make(baseModel.MapBoolColumn)
-		for _, queue := range mq.Queues {
-			message.Statuses[queue] = false
-		}
-
-		payload := map[string]interface{}{
-			"body":       msgContent,
-			"properties": mq.Properties,
-		}
-
-		message.Exchange = exchange.Name
-		message.QueueSender = config.Queue
-		message.QueueConsumers = mq.Queues
-		message.Key = mq.Key
+		message.ConnectionId = mqConnection.ID
+		message.Exchange = mq.Exchange
+		message.Queue = mq.Queue
 		message.SenderId = mq.SenderId
 		message.SenderType = mq.SenderType
+		message.SenderService = mq.service
 		message.Payload = payload
 
-		err := conf.RabbitMQSQL.Create(&message).Error
+		err := RabbitMQSQL.Create(&message).Error
 		if err == nil {
-			msgContent["messageId"] = message.ID
-			payload["body"] = msgContent
+			payload["messageId"] = message.ID
 
 			message.Payload = payload
-			conf.RabbitMQSQL.Save(&message)
+			RabbitMQSQL.Save(&message)
 		} else {
 			log.Panicf("Unable to save message: %s", err)
 		}
 	}
 
-	mq.Body = msgContent
+	mq.body = payload
 	return mq
 }
 
 func (mq *RabbitMQ) publishMessage() {
-	config := conf.RabbitMQConf
-	connConf := config.Connection
-	exchange := config.Exchange
-
-	conn, err := amqp091.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", connConf.Username, connConf.Password, connConf.Host, connConf.Port))
-	if err != nil {
-		log.Panicf("Failed to connect to RabbitMQ: %s", err)
+	conn, ok := RabbitMQConnectionDial[mq.Connection]
+	if !ok {
+		log.Panicf("Please init rabbitmq connection first")
 	}
-	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -125,38 +143,72 @@ func (mq *RabbitMQ) publishMessage() {
 	}
 	defer ch.Close()
 
-	err = ch.ExchangeDeclare(
-		exchange.Name,
-		exchange.Type,
-		exchange.Durable,
-		exchange.AutoDelete,
-		exchange.Internal,
-		exchange.NoWait,
-		exchange.Args,
-	)
-	if err != nil {
-		log.Panicf("Failed to declare a exchange: %s", err)
+	var timeout time.Duration
+	if mq.Timeout == nil {
+		timeout = 10 * time.Second
+	} else {
+		timeout = *mq.Timeout
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	body, _ := json.Marshal(mq.Body)
+	body, _ := json.Marshal(mq.body)
 
-	for _, queue := range mq.Queues {
+	if mq.Exchange != "" {
+		err = ch.ExchangeDeclare(
+			mq.Exchange,
+			"fanout",
+			true,
+			false,
+			false,
+			false,
+			nil,
+		)
+		if err != nil {
+			log.Panicf("Failed to declare a exchange: %s", err)
+		}
+
 		err = ch.PublishWithContext(ctx,
-			exchange.Name,
-			queue,
+			mq.Exchange,
+			"",
 			false,
 			false,
 			amqp091.Publishing{
-				CorrelationId: mq.Properties.CorrelationId,
-				DeliveryMode:  mq.Properties.DeliveryMode,
-				ContentType:   mq.Properties.ContentType,
+				CorrelationId: mq.properties.CorrelationId,
+				DeliveryMode:  mq.properties.DeliveryMode,
+				ContentType:   mq.properties.ContentType,
 				Body:          body,
 			})
 		if err != nil {
 			log.Panicf("Failed to publish a message: %s", err)
+		}
+	} else if mq.Queue != "" {
+		q, err := ch.QueueDeclare(
+			mq.Queue,
+			true,
+			false,
+			false,
+			false,
+			nil,
+		)
+		if err != nil {
+			log.Panicf("Failed to declare a queue: %s", err)
+		}
+
+		err = ch.PublishWithContext(ctx,
+			"",
+			q.Name,
+			false,
+			false,
+			amqp091.Publishing{
+				CorrelationId: mq.properties.CorrelationId,
+				DeliveryMode:  mq.properties.DeliveryMode,
+				ContentType:   mq.properties.ContentType,
+				Body:          body,
+			})
+		if err != nil {
+			log.Panicf("Failed to send a message: %s", err)
 		}
 	}
 }

@@ -4,12 +4,14 @@ import "github.com/globalxtreme/gobaseconf/model"
 
 type RabbitMQMessageFailed struct {
 	model.RabbitMQBaseModel
-	MessageId uint                     `gorm:"column:messageId;type:bigint;not null"`
-	Sender    string                   `gorm:"column:sender;type:varchar(250);not null"`
-	Consumer  string                   `gorm:"column:consumer;type:varchar(250);not null"`
-	Key       string                   `gorm:"column:key;type:varchar(250);default:null"`
-	Payload   []byte                   `gorm:"column:payload;type:json;default:null"`
-	Exception model.MapInterfaceColumn `gorm:"column:exception;type:json;default:null"`
+	ConnectionId uint                     `gorm:"column:connectionId;type:bigint;null"`
+	MessageId    uint                     `gorm:"column:messageId;type:bigint;not null"`
+	Service      string                   `gorm:"column:service;type:varchar(255);not null"`
+	Exchange     string                   `gorm:"column:exchange;type:varchar(255);null"`
+	Queue        string                   `gorm:"column:queue;type:varchar(255);null"`
+	Payload      []byte                   `gorm:"column:payload;type:json;default:null"`
+	Exception    model.MapInterfaceColumn `gorm:"column:exception;type:json;default:null"`
+	Resend       bool                     `gorm:"column:resend;type:boolean;default:0"`
 }
 
 func (RabbitMQMessageFailed) TableName() string {
