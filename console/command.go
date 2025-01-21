@@ -7,7 +7,6 @@ import (
 
 func Commands(cobraCmd *cobra.Command, newCommands []BaseInterface) {
 	addCommand(cobraCmd, &command.DeleteLogFileCommand{})
-	addCommand(cobraCmd, &command.RabbitMQConsumeCommand{})
 
 	for _, newCommand := range newCommands {
 		addCommand(cobraCmd, newCommand)
