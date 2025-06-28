@@ -24,3 +24,15 @@ func ErrXtremeValidation(attributes []interface{}) {
 func ErrXtremeNotFound(internalMsg string) {
 	response.Error(http.StatusNotFound, "Data not found", internalMsg, nil)
 }
+
+func ErrXtremeRabbitMQMessageGet(internalMsg string) {
+	response.Error(http.StatusNotFound, "RabbitMQ message not found", internalMsg, nil)
+}
+
+func ErrXtremeRabbitMQMessageDeliveryGet(internalMsg string) {
+	response.Error(http.StatusNotFound, "RabbitMQ message delivery not found", internalMsg, nil)
+}
+
+func ErrXtremeRabbitMQMessageDeliveryValidation(internalMsg string) {
+	response.Error(http.StatusBadRequest, "RabbitMQ message delivery form invalid", internalMsg, nil)
+}

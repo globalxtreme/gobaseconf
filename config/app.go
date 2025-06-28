@@ -6,10 +6,11 @@ import (
 )
 
 var (
-	HostFull string
-	Host     string
-	Port     string
-	Protocol string
+	HostFull    string
+	Host        string
+	Port        string
+	Protocol    string
+	ServiceName string
 )
 
 func SetHost() {
@@ -34,4 +35,12 @@ func GetHostFull() string {
 	}
 
 	return HostFull
+}
+
+func GetServiceName() string {
+	if ServiceName == "" {
+		ServiceName = os.Getenv("SERVICE")
+	}
+
+	return ServiceName
 }
