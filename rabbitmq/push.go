@@ -139,6 +139,11 @@ func (mq *RabbitMQ) setupMessage() *RabbitMQ {
 	}
 
 	if message.ID == 0 {
+		withDelivery := mq.Deliveries != nil && len(mq.Deliveries) > 0
+		if withDelivery && ((mq.SenderId == nil || *mq.SenderId == "") || (mq.SenderType == nil || *mq.SenderType == "")) {
+			log.Panicf("Please set your sender id and type first!")
+		}
+
 		message.ConnectionId = mqConnection.ID
 		message.Exchange = mq.Exchange
 		message.Queue = mq.Queue
@@ -154,7 +159,7 @@ func (mq *RabbitMQ) setupMessage() *RabbitMQ {
 			message.Payload = payload
 			RabbitMQSQL.Save(&message)
 
-			if mq.Deliveries != nil && len(mq.Deliveries) > 0 {
+			if withDelivery {
 				msgDeliveries := make([]rabbitmqmodel.RabbitMQMessageDelivery, 0)
 				for _, delivery := range mq.Deliveries {
 					msgDeliveries = append(msgDeliveries, rabbitmqmodel.RabbitMQMessageDelivery{
