@@ -13,12 +13,51 @@ import (
 	"time"
 )
 
+type LogForm struct {
+	Type            string      `json:"type"`
+	DateTime        string      `json:"dateTime"`
+	Content         any         `json:"content"`
+	Stack           []byte      `json:"stack"`
+	Bug             bool        `json:"bug"`
+	Payload         interface{} `json:"payload"`
+	PerformedBy     string      `json:"performedBy"`
+	PerformedByName string      `json:"performedByName"`
+	PerformedByType string      `json:"performedByType"`
+}
+
+func Log(form LogForm) {
+	if client.LogRPCActive {
+		message, _ := json.Marshal(form.Content)
+
+		request := log2.LogRequest{
+			Service:         os.Getenv("SERVICE"),
+			DateTime:        form.DateTime,
+			Message:         string(message),
+			Type:            form.Type,
+			Stack:           form.Stack,
+			Bug:             form.Bug,
+			PerformedBy:     form.PerformedBy,
+			PerformedByName: form.PerformedByName,
+			PerformedByType: form.PerformedByType,
+		}
+
+		if form.Payload != nil {
+			payload, _ := json.Marshal(form.Payload)
+			request.Payload = payload
+		}
+
+		sendLog(&request)
+	} else {
+		setOutput(form.Type, form.Content)
+	}
+}
+
 func Info(content any) {
 	logType := "INFO"
 	if client.LogRPCActive {
 		message, _ := json.Marshal(content)
 
-		SendBugLog(&log2.LogRequest{
+		sendLog(&log2.LogRequest{
 			Service: os.Getenv("SERVICE"),
 			Type:    logType,
 			Message: string(message),
@@ -33,7 +72,7 @@ func Error(content any, bug bool) {
 
 	logType := "ERROR"
 	if client.LogRPCActive {
-		SendBugLog(&log2.LogRequest{
+		sendLog(&log2.LogRequest{
 			Service: os.Getenv("SERVICE"),
 			Type:    logType,
 			Message: fmt.Sprintf("panic: %v", content),
@@ -51,7 +90,7 @@ func Debug(content any) {
 	if client.LogRPCActive {
 		message, _ := json.Marshal(content)
 
-		SendBugLog(&log2.LogRequest{
+		sendLog(&log2.LogRequest{
 			Service: os.Getenv("SERVICE"),
 			Type:    logType,
 			Message: string(message),
@@ -61,7 +100,7 @@ func Debug(content any) {
 	}
 }
 
-func SendBugLog(req *log2.LogRequest) (*log2.LGResponse, error) {
+func sendLog(req *log2.LogRequest) (*log2.LGResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), client.LogRPCTimeout)
 	defer cancel()
 

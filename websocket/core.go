@@ -54,9 +54,9 @@ const WS_EVENT_ACTION_DELETE = "action-delete"
 
 const WS_REQUEST_MESSAGE = "ws-request-message"
 
-// ** --- DEFAULT CHANNEL --- */
+// ** --- CHANNEL --- */
 
-const CHANNEL_WE_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING = "temporary.message-broker.async-workflow.monitoring"
+const CHANNEL_WE_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING = "ws-request-message"
 
 var (
 	Hub *hub

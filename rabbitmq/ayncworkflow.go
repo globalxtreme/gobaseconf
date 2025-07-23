@@ -466,9 +466,10 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 			}
 		}
 
-		sendToMonitoringEvent(workflow, workflowStep)
 		pushWorkflowMessage(workflow.ID, nextStep.Queue, payload)
 	}
+
+	sendToMonitoringEvent(workflow, workflowStep)
 }
 
 func sendToMonitoringEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
