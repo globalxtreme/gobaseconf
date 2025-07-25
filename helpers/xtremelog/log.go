@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const LOG_PERFORMED_TYPE_EMPLOYEE = "employee"
+const LOG_PERFORMED_TYPE_CUSTOMER = "customer"
+const LOG_PERFORMED_TYPE_PARTNER = "partner"
+
 type LogForm struct {
 	Type            string      `json:"type"`
 	DateTime        string      `json:"dateTime"`
@@ -39,6 +43,10 @@ func Log(form LogForm) {
 			PerformedBy:     form.PerformedBy,
 			PerformedByName: form.PerformedByName,
 			PerformedByType: form.PerformedByType,
+		}
+
+		if request.Type == "" {
+			request.Type = "INFO"
 		}
 
 		if form.Payload != nil {

@@ -23,9 +23,14 @@ var (
 	LogRPCActive bool
 )
 
-func InitLogRPC() func() {
+func InitLogRPC(force ...bool) func() {
+	isForce := false
+	if len(force) > 0 {
+		isForce = force[0]
+	}
+
 	addr := os.Getenv("GRPC_LOG_HOST")
-	if !config.DevMode && addr != "" {
+	if (isForce || !config.DevMode) && addr != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
 		keepaliveParam := keepalive.ClientParameters{

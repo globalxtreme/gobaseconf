@@ -91,3 +91,18 @@ func StringToArrayString(text string) []string {
 
 	return array
 }
+
+func ToInt(text string) int {
+	value, _ := strconv.Atoi(text)
+	return value
+}
+
+func ToBool(text string) bool {
+	value, _ := strconv.ParseBool(text)
+	return value
+}
+
+func ToFloat64(text string) float64 {
+	value, _ := strconv.ParseFloat(text, 64)
+	return value
+}
