@@ -57,7 +57,7 @@ const WS_REQUEST_MESSAGE = "ws-request-message"
 
 // ** --- CHANNEL --- */
 
-const WE_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING = "ws-channel.async-workflow.monitoring"
+const WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING = "ws-channel.async-workflow.monitoring"
 
 var (
 	Hub *hub
@@ -154,24 +154,40 @@ func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(
 	conn := config.RedisAsyncWorkflowPool.Get()
 	defer conn.Close()
 
-	channel += fmt.Sprintf(":%s", groupId)
 	psc := redis.PubSubConn{Conn: conn}
+	defer psc.Unsubscribe()
+
+	channel += fmt.Sprintf(":%s", groupId)
 	if err := psc.Subscribe(channel); err != nil {
 		return err
 	}
 
+	messageChan := make(chan []byte)
+	errChan := make(chan error)
+
+	go func() {
+		defer close(messageChan)
+		defer close(errChan)
+
+		for {
+			switch v := psc.Receive().(type) {
+			case redis.Message:
+				messageChan <- v.Data
+			case error:
+				errChan <- v
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
-			psc.Unsubscribe(channel)
 			return nil
-		default:
-			switch v := psc.Receive().(type) {
-			case redis.Message:
-				handleMessage(v.Data)
-			case error:
-				return v
-			}
+		case msg := <-messageChan:
+			handleMessage(msg)
+		case err := <-errChan:
+			return err
 		}
 	}
 }
