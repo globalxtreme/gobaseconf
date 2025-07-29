@@ -97,7 +97,7 @@ func (flow *GXAsyncWorkflow) Push() {
 		var countWorkflow int64
 		err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflow{}).
 			Where(`action = ? AND referenceId = ? AND referenceType = ? AND referenceService = ?`, flow.Action, flow.ReferenceId, flow.ReferenceType, config.GetServiceName()).
-			Where(`statusId != ?`, RABBITMQ_ASYNC_WORKFLOW_STATUS_FINISH_ID).
+			Where(`statusId != ?`, RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID).
 			Count(&countWorkflow)
 		if err != nil || countWorkflow > 0 {
 			log.Panicf("You have an asynchronous workflow not yet finished. Please check your workflow status and reprocess")
@@ -314,7 +314,7 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 	processingWorkflow(&workflow, &workflowStep)
 
 	var result interface{}
-	if workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_FINISH_ID {
+	if workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
 		result, err = opt.Consumer.Consume(mqBody.Data)
 		if err != nil {
 			failedWorkflow(fmt.Sprintf("Consume async workflow is failed: %s", err), &workflow, &workflowStep)
@@ -368,12 +368,12 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		stepResponse = &stepResponseMap
 	}
 
-	workflowStep.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_FINISH_ID
+	workflowStep.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID
 	workflowStep.Response = (*model.MapInterfaceColumn)(stepResponse)
 
 	err := RabbitMQSQL.Where("id = ?", workflowStep.ID).
 		Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-			StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_FINISH_ID,
+			StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID,
 			Response: (*model.MapInterfaceColumn)(stepResponse),
 		}).Error
 	if err != nil {
@@ -381,11 +381,11 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 	}
 
 	if workflow.TotalStep == workflowStep.StepOrder {
-		workflow.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_FINISH_ID
+		workflow.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID
 
 		err := RabbitMQSQL.Where("id = ?", workflow.ID).
 			Updates(&rabbitmqmodel.RabbitMQAsyncWorkflow{
-				StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_FINISH_ID,
+				StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow to finish: %s", err), true)

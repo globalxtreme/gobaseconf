@@ -35,7 +35,7 @@ func InitRedis() {
 	}
 }
 
-func InitRedisAsyncWorkflow() {
+func InitRedisAsyncWorkflowPool() {
 	RedisAsyncWorkflowPool = &redis.Pool{
 		MaxIdle:     100,
 		MaxActive:   500,
