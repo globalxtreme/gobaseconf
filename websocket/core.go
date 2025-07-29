@@ -1,9 +1,10 @@
 package xtremews
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/globalxtreme/gobaseconf/queue"
+	"github.com/globalxtreme/gobaseconf/config"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -138,7 +139,7 @@ func Run() {
 }
 
 func Publish(channel, groupId string, action string, message interface{}) error {
-	conn := queue.RedisPool.Get()
+	conn := config.RedisAsyncWorkflowPool.Get()
 	defer conn.Close()
 
 	channel += fmt.Sprintf(":%s", groupId)
@@ -149,8 +150,8 @@ func Publish(channel, groupId string, action string, message interface{}) error 
 	return nil
 }
 
-func Subscribe(channel, groupId string, handleMessage func(message []byte)) error {
-	conn := queue.RedisPool.Get()
+func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(message []byte)) error {
+	conn := config.RedisAsyncWorkflowPool.Get()
 	defer conn.Close()
 
 	channel += fmt.Sprintf(":%s", groupId)
@@ -160,11 +161,17 @@ func Subscribe(channel, groupId string, handleMessage func(message []byte)) erro
 	}
 
 	for {
-		switch v := psc.Receive().(type) {
-		case redis.Message:
-			handleMessage(v.Data)
-		case error:
-			return v
+		select {
+		case <-ctx.Done():
+			psc.Unsubscribe(channel)
+			return nil
+		default:
+			switch v := psc.Receive().(type) {
+			case redis.Message:
+				handleMessage(v.Data)
+			case error:
+				return v
+			}
 		}
 	}
 }

@@ -480,7 +480,7 @@ func sendToMonitoringEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflo
 		"totalStep":   workflow.TotalStep,
 		"reprocessed": workflow.Reprocessed,
 		"createdBy":   workflow.CreatedByName,
-		"createdAt":   workflow.CreatedAt.Format("02/01/2006 15:04"),
+		"createdAt":   workflow.CreatedAt.Format("02/01/2006 15:04:05"),
 		"reference": map[string]interface{}{
 			"id":      workflow.ReferenceId,
 			"type":    workflow.ReferenceType,
@@ -498,8 +498,8 @@ func sendToMonitoringEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflo
 			"errors":         workflowStep.Errors,
 			"response":       workflowStep.Response,
 			"reprocessed":    workflowStep.Reprocessed,
-			"createdAt":      workflowStep.CreatedAt.Format("02/01/2006 15:04"),
-			"updatedAt":      workflowStep.UpdatedAt.Format("02/01/2006 15:04"),
+			"createdAt":      workflowStep.CreatedAt.Format("02/01/2006 15:04:05"),
+			"updatedAt":      workflowStep.UpdatedAt.Format("02/01/2006 15:04:05"),
 		},
 	}
 

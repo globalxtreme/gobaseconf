@@ -2,6 +2,7 @@ package queue
 
 import (
 	"fmt"
+	"github.com/globalxtreme/gobaseconf/config"
 	"github.com/gocraft/work"
 	"gorm.io/gorm/utils"
 	"log"
@@ -22,7 +23,7 @@ func (q Queue) Work(workers []JobConf) {
 		names = strings.Split(q.Names, ",")
 	}
 
-	RegisterRedis()
+	config.InitRedis()
 
 	var pools []*work.WorkerPool
 
@@ -33,7 +34,7 @@ func (q Queue) Work(workers []JobConf) {
 			}
 		}
 
-		pool := work.NewWorkerPool(worker.Context, worker.Concurrency, worker.QueueName, RedisPool)
+		pool := work.NewWorkerPool(worker.Context, worker.Concurrency, worker.QueueName, config.RedisPool)
 		pool.JobWithOptions(worker.JobName, work.JobOptions{
 			Priority: worker.Priority,
 		}, worker.JobFunc)
