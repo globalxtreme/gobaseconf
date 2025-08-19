@@ -363,18 +363,19 @@ func processingWorkflow(workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowS
 }
 
 func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep, result interface{}, forwardPayloads []AsyncWorkflowForwardPayloadResult) {
-	var stepResponse *map[string]interface{}
-	if stepResponseMap, ok := result.(map[string]interface{}); ok && len(stepResponseMap) > 0 {
-		stepResponse = &stepResponseMap
-	}
-
 	workflowStep.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID
-	workflowStep.Response = (*model.MapInterfaceColumn)(stepResponse)
+
+	stepResponseMap, resOk := result.(map[string]interface{})
+	if resOk && len(stepResponseMap) > 0 {
+		workflowStep.Response = (*model.MapInterfaceColumn)(&stepResponseMap)
+	} else if workflowStep.Response != nil {
+		stepResponseMap = *workflowStep.Response
+	}
 
 	err := RabbitMQSQL.Where("id = ?", workflowStep.ID).
 		Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-			StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID,
-			Response: (*model.MapInterfaceColumn)(stepResponse),
+			StatusId: workflowStep.StatusId,
+			Response: workflowStep.Response,
 		}).Error
 	if err != nil {
 		xtremelog.Error(fmt.Sprintf("Error updating workflow step status to finish: %s", err), true)
@@ -447,13 +448,12 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		}
 
 		payload := make(map[string]interface{})
-		resultMap, ok := result.(map[string]interface{})
-		if ok && len(resultMap) > 0 {
-			payload = resultMap
+		if resOk && len(stepResponseMap) > 0 {
+			payload = stepResponseMap
 
 			err = RabbitMQSQL.Where("id = ?", nextStep.ID).
 				Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-					Payload: (*model.MapInterfaceColumn)(&resultMap),
+					Payload: (*model.MapInterfaceColumn)(&stepResponseMap),
 				}).Error
 			if err != nil {
 				xtremelog.Error(fmt.Sprintf("Unable to update payload to next step. Step Order (%d): %s", (workflowStep.StepOrder+1), err), true)
