@@ -40,6 +40,10 @@ type WSOption struct {
 	DefaultEvent string
 }
 
+type WSHandlerOption struct {
+	HasSubscribedEvent bool
+}
+
 // ** --- EVENT --- */
 
 const WS_EVENT_RESPONSE = "response"
@@ -54,10 +58,13 @@ const WS_EVENT_ACTION_DELETE = "action-delete"
 // ** --- REQUEST --- */
 
 const WS_REQUEST_MESSAGE = "ws-request-message"
+const WS_REQUEST_SUBSCRIPTION = "ws-request-subscription"
 
 // ** --- CHANNEL --- */
 
 const WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING = "ws-channel.async-workflow.monitoring"
+
+const WS_GROUP_ID_ASYNC_WORKFLOW_MONITORING_LIST = "asa.monitoring.list"
 
 var (
 	Hub *hub
@@ -210,4 +217,8 @@ func SetContent(event string, content interface{}, processError error) []byte {
 
 	result, _ := json.Marshal(data)
 	return result
+}
+
+func GetSubscription(r *http.Request) *Subscription {
+	return r.Context().Value(WS_REQUEST_SUBSCRIPTION).(*Subscription)
 }
