@@ -333,7 +333,7 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 	if workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
 		result, err = opt.Consumer.Consume(mqBody.Data)
 		if err != nil {
-			failedWorkflow(fmt.Sprintf("Process in action %s and step %d is failed", workflow.Action, workflowStep.StepOrder), err, &workflow, &workflowStep)
+			failedWorkflow(fmt.Sprintf("Process in action [%s] and step [%d] is failed", workflow.Action, workflowStep.StepOrder), err, &workflow, &workflowStep)
 			return
 		}
 	} else {
@@ -490,7 +490,7 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 
 		successMsg := workflow.SuccessMessage
 		if successMsg == "" {
-			successMsg = fmt.Sprintf("Process in action %s has been successfully", workflow.SuccessMessage)
+			successMsg = fmt.Sprintf("Process in action %s has been successfully", workflow.Action)
 		}
 		pushToNotification(workflow, workflowStep, successMsg, successMsg)
 	}
@@ -675,7 +675,7 @@ func pushToNotification(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, step rabbi
 		message := fmt.Sprintf("*ERROR ASA:* %d\n", workflow.ID)
 		message += fmt.Sprintf("*Action:* %s\n", workflow.Action)
 		message += fmt.Sprintf("*Reference:* %s:%s\n", workflow.ReferenceType, workflow.ReferenceId)
-		message += fmt.Sprintf("*Service:* %s:%s\n\n", workflow.ReferenceService)
+		message += fmt.Sprintf("*Service:* %s\n\n", workflow.ReferenceService)
 
 		message += fmt.Sprintf("*Step:* %d\n", step.StepOrder)
 		message += fmt.Sprintf("*Service:* %s\n", step.Service)
