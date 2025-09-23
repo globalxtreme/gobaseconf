@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/globalxtreme/gobaseconf/api/privateapi"
 	"github.com/globalxtreme/gobaseconf/config"
 	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/globalxtreme/gobaseconf/model"
@@ -19,9 +20,11 @@ import (
 type GXAsyncWorkflow struct {
 	Strict         bool
 	Action         string
+	Description    string
 	ReferenceId    string
 	ReferenceType  string
 	SuccessMessage string
+	ErrorMessage   string
 	CreatedBy      *string
 	CreatedByName  *string
 
@@ -74,6 +77,10 @@ func (flow *GXAsyncWorkflow) OnReference(referenceId any, referenceType string) 
 	flow.ReferenceType = referenceType
 }
 
+func (flow *GXAsyncWorkflow) SetDescription(description string) {
+	flow.Description = description
+}
+
 func (flow *GXAsyncWorkflow) SetCreatedBy(createdBy string, createdByName string) {
 	flow.CreatedBy = &createdBy
 	flow.CreatedByName = &createdByName
@@ -81,6 +88,10 @@ func (flow *GXAsyncWorkflow) SetCreatedBy(createdBy string, createdByName string
 
 func (flow *GXAsyncWorkflow) SetSuccessMessage(message string) {
 	flow.SuccessMessage = message
+}
+
+func (flow *GXAsyncWorkflow) SetErrorMessage(message string) {
+	flow.ErrorMessage = message
 }
 
 func (flow *GXAsyncWorkflow) Push() {
@@ -106,10 +117,13 @@ func (flow *GXAsyncWorkflow) Push() {
 
 	workflow := rabbitmqmodel.RabbitMQAsyncWorkflow{
 		Action:           flow.Action,
+		Description:      flow.Description,
 		StatusId:         RABBITMQ_ASYNC_WORKFLOW_STATUS_PENDING_ID,
 		ReferenceId:      flow.ReferenceId,
 		ReferenceType:    flow.ReferenceType,
 		ReferenceService: config.GetServiceName(),
+		SuccessMessage:   flow.SuccessMessage,
+		ErrorMessage:     flow.ErrorMessage,
 		TotalStep:        flow.totalStep,
 		CreatedBy:        flow.CreatedBy,
 		CreatedByName:    flow.CreatedByName,
@@ -298,14 +312,14 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 	var workflow rabbitmqmodel.RabbitMQAsyncWorkflow
 	err = RabbitMQSQL.First(&workflow, mqBody.WorkflowId).Error
 	if err != nil {
-		failedWorkflow(fmt.Sprintf("Get async workflow data: %s", err), nil, nil)
+		failedWorkflow(fmt.Sprintf("Get async workflow data is failed: %s", err.Error()), err, nil, nil)
 		return
 	}
 
 	var workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep
 	err = RabbitMQSQL.Where("workflowId = ? AND queue = ?", mqBody.WorkflowId, opt.Queue).First(&workflowStep).Error
 	if err != nil {
-		failedWorkflow(fmt.Sprintf("Get async workflow step data %s: %s", opt.Queue, err), &workflow, nil)
+		failedWorkflow(fmt.Sprintf("Get async workflow step data %s is failed: %s", opt.Queue, err.Error()), err, &workflow, nil)
 		return
 	}
 
@@ -319,7 +333,7 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 	if workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
 		result, err = opt.Consumer.Consume(mqBody.Data)
 		if err != nil {
-			failedWorkflow(fmt.Sprintf("Consume async workflow is failed: %s", err), &workflow, &workflowStep)
+			failedWorkflow(fmt.Sprintf("Process in action %s and step %d is failed", workflow.Action, workflowStep.StepOrder), err, &workflow, &workflowStep)
 			return
 		}
 	} else {
@@ -473,6 +487,12 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 
 	if workflow.StatusId == RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
 		sendToMonitoringEvent(workflow)
+
+		successMsg := workflow.SuccessMessage
+		if successMsg == "" {
+			successMsg = fmt.Sprintf("Process in action %s has been successfully", workflow.SuccessMessage)
+		}
+		pushToNotification(workflow, workflowStep, successMsg, successMsg)
 	}
 
 	sendToMonitoringActionEvent(workflow, workflowStep)
@@ -496,6 +516,7 @@ func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, w
 	result := map[string]interface{}{
 		"id":          workflow.ID,
 		"action":      workflow.Action,
+		"description": workflow.Description,
 		"status":      RabbitMQAsyncWorkflowStatus{}.IDAndName(workflow.StatusId),
 		"totalStep":   workflow.TotalStep,
 		"reprocessed": workflow.Reprocessed,
@@ -532,12 +553,12 @@ func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, w
 	}
 }
 
-func failedWorkflow(errorMsg string, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
-	xtremelog.Error(errorMsg, true)
+func failedWorkflow(message string, errTrace error, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
+	xtremelog.Error(message, true)
 
 	workflowStepIsValid := workflowStep != nil && workflowStep.ID > 0
 	if workflowStepIsValid && workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID {
-		exceptionRes := map[string]interface{}{"message": errorMsg, "trace": ""}
+		exceptionRes := map[string]interface{}{"message": message, "trace": errTrace}
 
 		stepErrors := make([]map[string]interface{}, 0)
 		if workflowStep.Errors != nil {
@@ -575,6 +596,12 @@ func failedWorkflow(errorMsg string, workflow *rabbitmqmodel.RabbitMQAsyncWorkfl
 	if workflowIsValid && workflowStepIsValid {
 		sendToMonitoringEvent(*workflow)
 		sendToMonitoringActionEvent(*workflow, *workflowStep)
+
+		errTitle := workflow.ErrorMessage
+		if errTitle == "" {
+			errTitle = message
+		}
+		pushToNotification(*workflow, *workflowStep, errTitle, errTrace.Error())
 	}
 }
 
@@ -624,6 +651,45 @@ func pushWorkflowMessage(workflowId uint, queue string, payload interface{}) {
 		})
 	if err != nil {
 		log.Panicf("Failed to send a message: %s", err)
+	}
+}
+
+func pushToNotification(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, step rabbitmqmodel.RabbitMQAsyncWorkflowStep, title, body string) {
+	api, err := privateapi.NewBusinessAPI()
+	if err != nil {
+		xtremelog.Error(fmt.Sprintf("Unable to create new business API: %s", err), true)
+		return
+	}
+
+	api.NotificationPush(map[string]interface{}{
+		"blueprintCode": "async-workflow.admin",
+		"data": map[string]interface{}{
+			"title":       title,
+			"body":        body,
+			"recipientId": workflow.CreatedBy,
+			"deepLink":    "",
+		},
+	})
+
+	if step.StatusId == RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID && step.Reprocessed >= 10 {
+		message := fmt.Sprintf("*ERROR ASA:* %d\n", workflow.ID)
+		message += fmt.Sprintf("*Action:* %s\n", workflow.Action)
+		message += fmt.Sprintf("*Reference:* %s:%s\n", workflow.ReferenceType, workflow.ReferenceId)
+		message += fmt.Sprintf("*Service:* %s:%s\n\n", workflow.ReferenceService)
+
+		message += fmt.Sprintf("*Step:* %d\n", step.StepOrder)
+		message += fmt.Sprintf("*Service:* %s\n", step.Service)
+		message += fmt.Sprintf("*Executor:* %s\n\n", step.Queue)
+
+		message += fmt.Sprintf("*Title:* %s\n", title)
+		message += fmt.Sprintf("*Body:* %s", body)
+
+		api.NotificationPush(map[string]interface{}{
+			"blueprintCode": "async-workflow.developer",
+			"data": map[string]interface{}{
+				"message": message,
+			},
+		})
 	}
 }
 

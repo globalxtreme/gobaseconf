@@ -36,3 +36,7 @@ func ErrXtremeRabbitMQMessageDeliveryGet(internalMsg string) {
 func ErrXtremeRabbitMQMessageDeliveryValidation(internalMsg string) {
 	response.Error(http.StatusBadRequest, "RabbitMQ message delivery form invalid", internalMsg, nil)
 }
+
+func ErrXtremeAPI(internalMsg string) {
+	response.Error(http.StatusInternalServerError, "Calling external api is invalid!", internalMsg, nil)
+}
