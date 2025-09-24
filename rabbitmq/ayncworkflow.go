@@ -312,14 +312,14 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 	var workflow rabbitmqmodel.RabbitMQAsyncWorkflow
 	err = RabbitMQSQL.First(&workflow, mqBody.WorkflowId).Error
 	if err != nil {
-		failedWorkflow(fmt.Sprintf("Get async workflow data is failed: %s", err.Error()), err, nil, nil)
+		failedWorkflow("Get async workflow data is failed", err, nil, nil)
 		return
 	}
 
 	var workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep
 	err = RabbitMQSQL.Where("workflowId = ? AND queue = ?", mqBody.WorkflowId, opt.Queue).First(&workflowStep).Error
 	if err != nil {
-		failedWorkflow(fmt.Sprintf("Get async workflow step data %s is failed: %s", opt.Queue, err.Error()), err, &workflow, nil)
+		failedWorkflow(fmt.Sprintf("Get async workflow step data (%s) is failed", opt.Queue), err, &workflow, nil)
 		return
 	}
 
@@ -333,7 +333,7 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 	if workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
 		result, err = opt.Consumer.Consume(mqBody.Data)
 		if err != nil {
-			failedWorkflow(fmt.Sprintf("Process in action [%s] and step [%d] is failed", workflow.Action, workflowStep.StepOrder), err, &workflow, &workflowStep)
+			failedWorkflow(fmt.Sprintf("Process in action (%s) and step (%d) is failed", workflow.Action, workflowStep.StepOrder), err, &workflow, &workflowStep)
 			return
 		}
 	} else {
@@ -490,7 +490,7 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 
 		successMsg := workflow.SuccessMessage
 		if successMsg == "" {
-			successMsg = fmt.Sprintf("Process in action %s has been successfully", workflow.Action)
+			successMsg = fmt.Sprintf("Process in action (%s) has been successfully", workflow.Action)
 		}
 		pushToNotification(workflow, workflowStep, successMsg, successMsg)
 	}
@@ -553,12 +553,12 @@ func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, w
 	}
 }
 
-func failedWorkflow(message string, errTrace error, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
+func failedWorkflow(message string, internalMsg error, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
 	xtremelog.Error(message, true)
 
 	workflowStepIsValid := workflowStep != nil && workflowStep.ID > 0
 	if workflowStepIsValid && workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID {
-		exceptionRes := map[string]interface{}{"message": message, "trace": errTrace}
+		exceptionRes := map[string]interface{}{"message": message, "internalMsg": internalMsg, "trace": ""}
 
 		stepErrors := make([]map[string]interface{}, 0)
 		if workflowStep.Errors != nil {
@@ -601,7 +601,7 @@ func failedWorkflow(message string, errTrace error, workflow *rabbitmqmodel.Rabb
 		if errTitle == "" {
 			errTitle = message
 		}
-		pushToNotification(*workflow, *workflowStep, errTitle, errTrace.Error())
+		pushToNotification(*workflow, *workflowStep, errTitle, internalMsg.Error())
 	}
 }
 
@@ -655,7 +655,7 @@ func pushWorkflowMessage(workflowId uint, queue string, payload interface{}) {
 }
 
 func pushToNotification(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, step rabbitmqmodel.RabbitMQAsyncWorkflowStep, title, body string) {
-	api, err := privateapi.NewBusinessAPI()
+	api, err := privateapi.NewBusinessWorkflowAPI()
 	if err != nil {
 		xtremelog.Error(fmt.Sprintf("Unable to create new business API: %s", err), true)
 		return

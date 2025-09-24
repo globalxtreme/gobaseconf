@@ -7,18 +7,18 @@ import (
 	"os"
 )
 
-type BusinessAPI interface {
+type BusinessWorkflowAPI interface {
 	NotificationPush(payload interface{}) response.ResponseSuccessWithPagination
 }
 
-func NewBusinessAPI() (BusinessAPI, error) {
-	host := os.Getenv("CLIENT_PRIVATE_API_ASA_HOST")
-	clientId := os.Getenv("CLIENT_PRIVATE_API_ASA_ID")
-	clientName := os.Getenv("CLIENT_PRIVATE_API_ASA_NAME")
-	clientSecret := os.Getenv("CLIENT_PRIVATE_API_ASA_SECRET")
+func NewBusinessWorkflowAPI() (BusinessWorkflowAPI, error) {
+	host := os.Getenv("CLIENT_PRIVATE_API_BUSINESS_WORKFLOW_HOST")
+	clientId := os.Getenv("CLIENT_PRIVATE_API_BUSINESS_WORKFLOW_ID")
+	clientName := os.Getenv("CLIENT_PRIVATE_API_BUSINESS_WORKFLOW_NAME")
+	clientSecret := os.Getenv("CLIENT_PRIVATE_API_BUSINESS_WORKFLOW_SECRET")
 
 	if host == "" || clientId == "" || clientName == "" || clientSecret == "" {
-		return nil, errors.New("Please set private api ASA environment variables")
+		return nil, errors.New("Please set private api Business Workflow environment variables")
 	}
 
 	client := xtremeapi.NewXtremeAPI(xtremeapi.XtremeAPIOption{
@@ -29,7 +29,7 @@ func NewBusinessAPI() (BusinessAPI, error) {
 		},
 	})
 
-	api := businessAPI{
+	api := businessWorkflowAPI{
 		baseURL: host,
 		client:  client,
 	}
@@ -37,11 +37,11 @@ func NewBusinessAPI() (BusinessAPI, error) {
 	return &api, nil
 }
 
-type businessAPI struct {
+type businessWorkflowAPI struct {
 	baseURL string
 	client  xtremeapi.XtremeAPI
 }
 
-func (api *businessAPI) NotificationPush(payload interface{}) response.ResponseSuccessWithPagination {
+func (api *businessWorkflowAPI) NotificationPush(payload interface{}) response.ResponseSuccessWithPagination {
 	return api.client.Post(api.baseURL+"/notifications", payload)
 }
