@@ -146,7 +146,13 @@ func (flow *GXAsyncWorkflow) Push() {
 
 		payload, ok := step.Payload.(map[string]interface{})
 		if ok {
-			workflowStep.Payload = (*model.MapInterfaceColumn)(&payload)
+			if step.stepOrder == 1 {
+				workflowStep.Payload = (*model.MapInterfaceColumn)(&payload)
+			} else {
+				workflowStep.ForwardPayload = (*model.MapInterfaceColumn)(&map[string]interface{}{
+					flow.Action: payload,
+				})
+			}
 		}
 
 		workflowSteps = append(workflowSteps, workflowStep)
