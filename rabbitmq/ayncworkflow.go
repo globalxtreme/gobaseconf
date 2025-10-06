@@ -169,10 +169,12 @@ func (flow *GXAsyncWorkflow) Push() {
 }
 
 type AsyncWorkflowConsumerInterface interface {
+	setAction(action string)
 	setReferenceId(referenceId string)
 	setReferenceType(referenceType string)
 	setReferenceService(referenceService string)
 
+	GetAction() string
 	GetReferenceId() string
 	GetReferenceType() string
 	GetReferenceService() string
@@ -200,9 +202,14 @@ type asyncWorkflowBody struct {
 }
 
 type AsyncWorkflowConsumerBase struct {
+	action           string
 	referenceId      string
 	referenceType    string
 	referenceService string
+}
+
+func (b *AsyncWorkflowConsumerBase) setAction(action string) {
+	b.action = action
 }
 
 func (b *AsyncWorkflowConsumerBase) setReferenceId(referenceId string) {
@@ -215,6 +222,10 @@ func (b *AsyncWorkflowConsumerBase) setReferenceType(referenceType string) {
 
 func (b *AsyncWorkflowConsumerBase) setReferenceService(referenceService string) {
 	b.referenceService = referenceService
+}
+
+func (b *AsyncWorkflowConsumerBase) GetAction() string {
+	return b.action
 }
 
 func (b *AsyncWorkflowConsumerBase) GetReferenceId() string {
@@ -669,6 +680,7 @@ func pushToNotification(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, step rabbi
 
 	api.NotificationPush(map[string]interface{}{
 		"blueprintCode": "async-workflow.admin",
+		"service":       workflow.ReferenceService,
 		"data": map[string]interface{}{
 			"title":       title,
 			"body":        body,
@@ -692,6 +704,7 @@ func pushToNotification(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, step rabbi
 
 		api.NotificationPush(map[string]interface{}{
 			"blueprintCode": "async-workflow.developer",
+			"service":       workflow.ReferenceService,
 			"data": map[string]interface{}{
 				"message": message,
 			},
