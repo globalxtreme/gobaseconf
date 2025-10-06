@@ -491,11 +491,11 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 			if err != nil {
 				xtremelog.Error(fmt.Sprintf("Unable to update payload to next step. Step Order (%d): %s", (workflowStep.StepOrder+1), err), true)
 			}
+		}
 
-			if nextStep.ForwardPayload != nil && len(*nextStep.ForwardPayload) > 0 {
-				for _, forwardPayload := range *nextStep.ForwardPayload {
-					remappingForwardPayload(forwardPayload, &payload)
-				}
+		if nextStep.ForwardPayload != nil && len(*nextStep.ForwardPayload) > 0 {
+			for _, forwardPayload := range *nextStep.ForwardPayload {
+				remappingForwardPayload(forwardPayload, &payload)
 			}
 		}
 
