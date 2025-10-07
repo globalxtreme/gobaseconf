@@ -179,7 +179,7 @@ type AsyncWorkflowConsumerInterface interface {
 	GetReferenceId() string
 	GetReferenceType() string
 	GetReferenceService() string
-	Consume(payload interface{}) (interface{}, error)
+	Consume(payload interface{}) (interface{}, error, []byte)
 	Response(payload interface{}, data ...interface{}) interface{}
 }
 
@@ -330,14 +330,14 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 	var workflow rabbitmqmodel.RabbitMQAsyncWorkflow
 	err = RabbitMQSQL.First(&workflow, mqBody.WorkflowId).Error
 	if err != nil {
-		failedWorkflow("Get async workflow data is failed", err, nil, nil)
+		failedWorkflow("Get async workflow data is failed", err, debug.Stack(), nil, nil)
 		return
 	}
 
 	var workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep
 	err = RabbitMQSQL.Where("workflowId = ? AND queue = ?", mqBody.WorkflowId, opt.Queue).First(&workflowStep).Error
 	if err != nil {
-		failedWorkflow(fmt.Sprintf("Get async workflow step data (%s) is failed", opt.Queue), err, &workflow, nil)
+		failedWorkflow(fmt.Sprintf("Get async workflow step data (%s) is failed", opt.Queue), err, debug.Stack(), &workflow, nil)
 		return
 	}
 
@@ -349,9 +349,11 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 
 	var result interface{}
 	if workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
-		result, err = opt.Consumer.Consume(mqBody.Data)
+		var trace []byte
+
+		result, err, trace = opt.Consumer.Consume(mqBody.Data)
 		if err != nil {
-			failedWorkflow(fmt.Sprintf("Process in action (%s) and step (%d) is failed", workflow.Action, workflowStep.StepOrder), err, &workflow, &workflowStep)
+			failedWorkflow(fmt.Sprintf("Process in action (%s) and step (%d) is failed", workflow.Action, workflowStep.StepOrder), err, trace, &workflow, &workflowStep)
 			return
 		}
 	} else {
@@ -571,12 +573,12 @@ func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, w
 	}
 }
 
-func failedWorkflow(message string, err error, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
+func failedWorkflow(message string, err error, trace []byte, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
 	xtremelog.Error(message, true)
 
 	workflowStepIsValid := workflowStep != nil && workflowStep.ID > 0
 	if workflowStepIsValid && workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID {
-		exceptionRes := map[string]interface{}{"message": message, "internalMsg": err.Error(), "trace": string(debug.Stack())}
+		exceptionRes := map[string]interface{}{"message": message, "internalMsg": err.Error(), "trace": string(trace)}
 
 		stepErrors := make([]map[string]interface{}, 0)
 		if workflowStep.Errors != nil {
