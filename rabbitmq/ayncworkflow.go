@@ -13,6 +13,7 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 	"log"
 	"os/exec"
+	"runtime/debug"
 	"strconv"
 	"time"
 )
@@ -570,12 +571,12 @@ func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, w
 	}
 }
 
-func failedWorkflow(message string, internalMsg error, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
+func failedWorkflow(message string, err error, workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep *rabbitmqmodel.RabbitMQAsyncWorkflowStep) {
 	xtremelog.Error(message, true)
 
 	workflowStepIsValid := workflowStep != nil && workflowStep.ID > 0
 	if workflowStepIsValid && workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID {
-		exceptionRes := map[string]interface{}{"message": message, "internalMsg": internalMsg, "trace": ""}
+		exceptionRes := map[string]interface{}{"message": message, "internalMsg": err.Error(), "trace": string(debug.Stack())}
 
 		stepErrors := make([]map[string]interface{}, 0)
 		if workflowStep.Errors != nil {
@@ -618,7 +619,7 @@ func failedWorkflow(message string, internalMsg error, workflow *rabbitmqmodel.R
 		if errTitle == "" {
 			errTitle = message
 		}
-		pushToNotification(*workflow, *workflowStep, errTitle, internalMsg.Error())
+		pushToNotification(*workflow, *workflowStep, errTitle, err.Error())
 	}
 }
 
