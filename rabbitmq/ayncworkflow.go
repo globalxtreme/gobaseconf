@@ -341,6 +341,7 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, body []byte) {
 		return
 	}
 
+	opt.Consumer.setAction(workflow.Action)
 	opt.Consumer.setReferenceId(workflow.ReferenceId)
 	opt.Consumer.setReferenceType(workflow.ReferenceType)
 	opt.Consumer.setReferenceService(workflow.ReferenceService)
