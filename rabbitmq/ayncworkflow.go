@@ -479,7 +479,7 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 				}
 
 				if nextStep.Queue == forwardStep.Queue {
-					nextStep.ForwardPayload = (*model.MapInterfaceColumn)(&forwardStepPayload)
+					nextStep.ForwardPayload = (*model.MapInterfaceColumn)(&originForwardPayload)
 				}
 			}
 		}
