@@ -1,6 +1,9 @@
 package model
 
-import "github.com/globalxtreme/gobaseconf/model"
+import (
+	"github.com/globalxtreme/gobaseconf/model"
+	"time"
+)
 
 type RabbitMQAsyncWorkflow struct {
 	model.RabbitMQBaseModel
@@ -15,6 +18,7 @@ type RabbitMQAsyncWorkflow struct {
 	SuccessMessage   string                         `gorm:"column:successMessage;type:varchar(250);null"`
 	ErrorMessage     string                         `gorm:"column:errorMessage;type:varchar(250);null"`
 	Errors           *model.ArrayMapInterfaceColumn `gorm:"column:errors;type:json;default:null"`
+	AllowResendAt    *time.Time                     `gorm:"column:allowResendAt;type:timestamp;null"`
 	CreatedBy        *string                        `gorm:"column:createdBy;type:char(36);null"`
 	CreatedByName    *string                        `gorm:"column:createdByName;type:varchar(255);null"`
 
