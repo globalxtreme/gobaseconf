@@ -794,6 +794,7 @@ func getAllowResendInterval(conn redis.Conn) time.Duration {
 		}
 
 		interval = configuration.Value
+		conn.Do("SETEX", RABBITMQ_CONF_ALLOW_RESEND_WORKFLOW_INTERVAL, 300, interval) // 5 minute
 	}
 
 	if interval == "" {
