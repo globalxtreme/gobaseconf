@@ -120,6 +120,7 @@ func (flow *GXAsyncWorkflow) Push() {
 		}
 	}
 
+	allowResendAt := time.Now().Add(getAllowResendInterval(redisConn))
 	workflow := rabbitmqmodel.RabbitMQAsyncWorkflow{
 		Action:           flow.Action,
 		Description:      flow.Description,
@@ -130,6 +131,7 @@ func (flow *GXAsyncWorkflow) Push() {
 		SuccessMessage:   flow.SuccessMessage,
 		ErrorMessage:     flow.ErrorMessage,
 		TotalStep:        flow.totalStep,
+		AllowResendAt:    &allowResendAt,
 		CreatedBy:        flow.CreatedBy,
 		CreatedByName:    flow.CreatedByName,
 	}
@@ -554,6 +556,11 @@ func sendToMonitoringEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, redisCo
 }
 
 func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep, redisConn redis.Conn) {
+	var allowResendAt interface{}
+	if workflow.AllowResendAt != nil {
+		allowResendAt = workflow.AllowResendAt.Format("02/01/2006 15:04:05")
+	}
+
 	result := map[string]interface{}{
 		"id":            workflow.ID,
 		"action":        workflow.Action,
@@ -563,7 +570,7 @@ func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, w
 		"reprocessed":   workflow.Reprocessed,
 		"createdBy":     workflow.CreatedByName,
 		"createdAt":     workflow.CreatedAt.Format("02/01/2006 15:04:05"),
-		"allowResendAt": workflow.AllowResendAt.Format("02/01/2006 15:04:05"),
+		"allowResendAt": allowResendAt,
 		"reference": map[string]interface{}{
 			"id":      workflow.ReferenceId,
 			"type":    workflow.ReferenceType,
