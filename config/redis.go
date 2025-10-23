@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
+	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -13,10 +15,36 @@ var (
 )
 
 func InitRedis() {
+	var err error
+
+	maxActive := 5000
+	if maxActiveEnv := os.Getenv("REDIS_MAX_ACTIVE"); maxActiveEnv != "" {
+		maxActive, err = strconv.Atoi(maxActiveEnv)
+		if err != nil {
+			log.Panicf("Failed to parse REDIS_MAX_ACTIVE env var: %s", err)
+		}
+	}
+
+	maxIdle := 100
+	if maxIdleEnv := os.Getenv("REDIS_MAX_IDLE"); maxIdleEnv != "" {
+		maxIdle, err = strconv.Atoi(maxIdleEnv)
+		if err != nil {
+			log.Panicf("Failed to parse REDIS_MAX_IDLE env var: %s", err)
+		}
+	}
+
+	idleTimeout := 180
+	if idleTimeoutEnv := os.Getenv("REDIS_IDLE_TIMEOUT"); idleTimeoutEnv != "" {
+		idleTimeout, err = strconv.Atoi(idleTimeoutEnv)
+		if err != nil {
+			log.Panicf("Failed to parse REDIS_IDLE_TIMEOUT env var: %s", err)
+		}
+	}
+
 	RedisPool = &redis.Pool{
-		MaxIdle:     100,
-		MaxActive:   500,
-		IdleTimeout: 240 * time.Second,
+		MaxIdle:     maxIdle,
+		MaxActive:   maxActive,
+		IdleTimeout: time.Duration(idleTimeout) * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")))
 			if err != nil {
@@ -36,10 +64,36 @@ func InitRedis() {
 }
 
 func InitRedisAsyncWorkflowPool() {
+	var err error
+
+	maxActive := 5000
+	if maxActiveEnv := os.Getenv("REDIS_ASYNC_WORKFLOW_MAX_ACTIVE"); maxActiveEnv != "" {
+		maxActive, err = strconv.Atoi(maxActiveEnv)
+		if err != nil {
+			log.Panicf("Failed to parse REDIS_ASYNC_WORKFLOW_MAX_ACTIVE env var: %s", err)
+		}
+	}
+
+	maxIdle := 100
+	if maxIdleEnv := os.Getenv("REDIS_ASYNC_WORKFLOW_MAX_IDLE"); maxIdleEnv != "" {
+		maxIdle, err = strconv.Atoi(maxIdleEnv)
+		if err != nil {
+			log.Panicf("Failed to parse REDIS_ASYNC_WORKFLOW_MAX_IDLE env var: %s", err)
+		}
+	}
+
+	idleTimeout := 180
+	if idleTimeoutEnv := os.Getenv("REDIS_ASYNC_WORKFLOW_IDLE_TIMEOUT"); idleTimeoutEnv != "" {
+		idleTimeout, err = strconv.Atoi(idleTimeoutEnv)
+		if err != nil {
+			log.Panicf("Failed to parse REDIS_ASYNC_WORKFLOW_IDLE_TIMEOUT env var: %s", err)
+		}
+	}
+
 	RedisAsyncWorkflowPool = &redis.Pool{
-		MaxIdle:     100,
-		MaxActive:   500,
-		IdleTimeout: 240 * time.Second,
+		MaxIdle:     maxIdle,
+		MaxActive:   maxActive,
+		IdleTimeout: time.Duration(idleTimeout) * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", fmt.Sprintf("%s:%s", os.Getenv("REDIS_ASYNC_WORKFLOW_HOST"), os.Getenv("REDIS_ASYNC_WORKFLOW_PORT")))
 			if err != nil {

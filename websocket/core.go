@@ -145,9 +145,14 @@ func Run() {
 	}
 }
 
-func Publish(channel, groupId string, action string, message interface{}) error {
-	conn := config.RedisAsyncWorkflowPool.Get()
-	defer conn.Close()
+func Publish(channel, groupId string, action string, message interface{}, connArg ...redis.Conn) error {
+	var conn redis.Conn
+	if len(connArg) > 0 {
+		conn = connArg[0]
+	} else {
+		conn = config.RedisAsyncWorkflowPool.Get()
+		defer conn.Close()
+	}
 
 	channel += fmt.Sprintf(":%s", groupId)
 	_, err := conn.Do("PUBLISH", channel, SetContent(action, message, nil))
