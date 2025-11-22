@@ -7,8 +7,13 @@ import (
 
 var DevMode bool
 
-func InitDevMode() {
-	if DevMode {
+func InitDevMode(force ...bool) {
+	isDev := DevMode
+	if len(force) > 0 && force[0] {
+		isDev = true
+	}
+
+	if isDev {
 		fmt.Println("Running in development mode..")
 		err := godotenv.Load()
 		if err != nil {
