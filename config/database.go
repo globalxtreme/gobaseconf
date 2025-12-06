@@ -54,7 +54,7 @@ func SetMigration(conn *gorm.DB, collate string) *gorm.DB {
 
 func postgresqlConnection(conn DBConf) *gorm.DB {
 	if len(conn.TimeZone) == 0 {
-		conn.TimeZone = "Asia/Kuala_Lumpur"
+		conn.TimeZone = "Asia/Makassar"
 	}
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=%s",
