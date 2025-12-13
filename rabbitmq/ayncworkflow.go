@@ -114,7 +114,7 @@ func (flow *GXAsyncWorkflow) Push() {
 		err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflow{}).
 			Where(`action = ? AND referenceId = ? AND referenceType = ? AND referenceService = ?`, flow.Action, flow.ReferenceId, flow.ReferenceType, config.GetServiceName()).
 			Where(`statusId != ?`, RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID).
-			Count(&countWorkflow)
+			Count(&countWorkflow).Error
 		if err != nil || countWorkflow > 0 {
 			log.Panicf("You have an asynchronous workflow not yet finished. Please check your workflow status and reprocess")
 		}
