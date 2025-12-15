@@ -607,7 +607,7 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 
 	workflowStepIsValid := workflowStep != nil && workflowStep.ID > 0
 	if workflowStepIsValid && workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID {
-		exceptionRes := map[string]interface{}{"message": message, "internalMsg": err.Error(), "trace": string(trace)}
+		exceptionRes := map[string]interface{}{"message": err.Error(), "internalMsg": message, "trace": string(trace)}
 
 		stepErrors := make([]map[string]interface{}, 0)
 		if workflowStep.Errors != nil {
