@@ -172,7 +172,7 @@ func (flow *GXAsyncWorkflow) Push() {
 
 	sendToMonitoringEvent(workflow, redisConn)
 
-	pushWorkflowMessage(workflow.ID, flow.firstStep.Queue, flow.firstStep.Payload)
+	pushWorkflowMessage(workflow.ID, flow.firstStep.stepOrder, flow.firstStep.Queue, flow.firstStep.Payload)
 }
 
 type AsyncWorkflowConsumerInterface interface {
@@ -194,8 +194,9 @@ type AsyncWorkflowForwardPayloadInterface interface {
 }
 
 type AsyncWorkflowForwardPayloadResult struct {
-	Queue   string
-	Payload interface{}
+	Queue     string
+	StepOrder int
+	Payload   interface{}
 }
 
 type AsyncWorkflowConsumeOpt struct {
@@ -205,6 +206,7 @@ type AsyncWorkflowConsumeOpt struct {
 
 type asyncWorkflowBody struct {
 	WorkflowId uint `json:"workflowId"`
+	StepOrder  int  `json:"stepOrder"`
 	Data       any  `json:"data"`
 }
 
@@ -344,7 +346,8 @@ func processWorkflow(opt AsyncWorkflowConsumeOpt, redisConn redis.Conn, body []b
 	}
 
 	var workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep
-	err = RabbitMQSQL.Where("workflowId = ? AND queue = ?", mqBody.WorkflowId, opt.Queue).First(&workflowStep).Error
+	err = RabbitMQSQL.Where("workflowId = ? AND queue = ? AND stepOrder = ?", mqBody.WorkflowId, opt.Queue, mqBody.StepOrder).
+		First(&workflowStep).Error
 	if err != nil {
 		failedWorkflow(redisConn, fmt.Sprintf("Get async workflow step data (%s) is failed", opt.Queue), err, debug.Stack(), &workflow, nil)
 		return
@@ -470,7 +473,8 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 				continue
 			}
 
-			forwardPayloadMap[forwardPayload.Queue] = forwardPayload
+			forwardKey := fmt.Sprintf("%s-%d", forwardPayload.Queue, forwardPayload.StepOrder)
+			forwardPayloadMap[forwardKey] = forwardPayload
 			forwardPayloadQueues = append(forwardPayloadQueues, forwardPayload.Queue)
 		}
 
@@ -488,7 +492,8 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 					forwardStepPayload = firstForwardStepPayload
 				}
 
-				remappingForwardPayload(forwardPayloadMap[forwardStep.Queue].Payload, &forwardStepPayload)
+				forwardKey := fmt.Sprintf("%s-%d", forwardStep.Queue, forwardStep.StepOrder)
+				remappingForwardPayload(forwardPayloadMap[forwardKey].Payload, &forwardStepPayload)
 
 				originForwardPayload[workflowStep.Queue] = forwardStepPayload
 
@@ -525,7 +530,7 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 			}
 		}
 
-		pushWorkflowMessage(workflow.ID, nextStep.Queue, payload)
+		pushWorkflowMessage(workflow.ID, nextStep.StepOrder, nextStep.Queue, payload)
 	}
 
 	if workflow.StatusId == RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
@@ -654,7 +659,7 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 	}
 }
 
-func pushWorkflowMessage(workflowId uint, queue string, payload interface{}) {
+func pushWorkflowMessage(workflowId uint, stepOrder int, queue string, payload interface{}) {
 	conn, ok := RabbitMQConnectionDial[RABBITMQ_CONNECTION_GLOBAL]
 	if !ok {
 		log.Panicf("Please init rabbitmq connection first")
@@ -672,6 +677,7 @@ func pushWorkflowMessage(workflowId uint, queue string, payload interface{}) {
 	body, _ := json.Marshal(map[string]interface{}{
 		"data":       payload,
 		"workflowId": workflowId,
+		"stepOrder":  stepOrder,
 	})
 
 	q, err := ch.QueueDeclare(
