@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/globalxtreme/gobaseconf/config"
-	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/websocket"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -181,7 +181,7 @@ func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(
 		if err := psc.Subscribe(fullChannel); err != nil {
 			conn.Close()
 
-			xtremelog.Error(fmt.Sprintf("Failed to subscribe: %v", err), true)
+			//xtremelog.Error(fmt.Sprintf("Failed to subscribe: %v", err), true)
 			time.Sleep(retryDelay)
 
 			continue
@@ -213,7 +213,8 @@ func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(
 			psc.Unsubscribe()
 			conn.Close()
 
-			xtremelog.Error(fmt.Sprintf("Redis subscription error: %v — reconnecting...", err), true)
+			log.Printf(err.Error())
+			//xtremelog.Error(fmt.Sprintf("Redis subscription error: %v — reconnecting...", err), true)
 			time.Sleep(retryDelay)
 
 			continue // ⬅️ auto reconnect
