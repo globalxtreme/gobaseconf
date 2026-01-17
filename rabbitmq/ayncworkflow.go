@@ -170,9 +170,9 @@ func (flow *GXAsyncWorkflow) Push() {
 		log.Panicf("Unable to create workflow steps: %s", err.Error())
 	}
 
-	sendToMonitoringEvent(workflow, redisConn)
-
 	pushWorkflowMessage(workflow.ID, flow.firstStep.stepOrder, flow.firstStep.Queue, flow.firstStep.Payload)
+
+	//sendToMonitoringEvent(workflow, redisConn)
 }
 
 type AsyncWorkflowConsumerInterface interface {
@@ -408,7 +408,7 @@ func processingWorkflow(workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowS
 		}
 	}
 
-	sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
+	//sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
 }
 
 func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep, redisConn redis.Conn, result interface{}, forwardPayloads []AsyncWorkflowForwardPayloadResult) {
@@ -545,7 +545,7 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 	}
 
 	if workflow.StatusId == RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
-		sendToMonitoringEvent(workflow, redisConn)
+		//sendToMonitoringEvent(workflow, redisConn)
 
 		successMsg := workflow.SuccessMessage
 		if successMsg == "" {
@@ -554,7 +554,7 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		pushToNotification(workflow, workflowStep, successMsg, successMsg, "success")
 	}
 
-	sendToMonitoringActionEvent(workflow, workflowStep, redisConn)
+	//sendToMonitoringActionEvent(workflow, workflowStep, redisConn)
 }
 
 func sendToMonitoringEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, redisConn redis.Conn) {
@@ -659,8 +659,8 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 	}
 
 	if workflowIsValid && workflowStepIsValid {
-		sendToMonitoringEvent(*workflow, redisConn)
-		sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
+		//sendToMonitoringEvent(*workflow, redisConn)
+		//sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
 
 		errTitle := workflow.ErrorMessage
 		if errTitle == "" {
