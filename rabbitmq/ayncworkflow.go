@@ -626,9 +626,9 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 		exceptionRes := map[string]interface{}{"message": err.Error(), "internalMsg": message, "trace": string(trace)}
 
 		stepErrors := make([]map[string]interface{}, 0)
-		if workflowStep.Errors != nil {
-			stepErrors = *workflowStep.Errors
-		}
+		//if workflowStep.Errors != nil {
+		//	stepErrors = *workflowStep.Errors
+		//}
 
 		stepErrors = append(stepErrors, exceptionRes)
 
