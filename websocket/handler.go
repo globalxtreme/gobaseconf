@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -64,7 +63,7 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 							Content:     handleCallback(WS_EVENT_ROUTINE, r.WithContext(ctx)),
 						}
 					case <-subscription.StopChan:
-						xtremelog.Error(fmt.Sprintf("Stopping goroutine for RoomId: %s", subscription.RoomId), false)
+						WSLogError(fmt.Sprintf("Stopping goroutine for RoomId: %s", subscription.RoomId), false)
 						return
 					}
 				}
@@ -80,7 +79,7 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 		for {
 			_, message, err = conn.ReadMessage()
 			if err != nil {
-				xtremelog.Error(fmt.Sprintf("Error reading message: %v", err), false)
+				WSLogError(fmt.Sprintf("Error reading message: %v", err), false)
 				return
 			}
 
@@ -115,14 +114,14 @@ func WSCustomSubscriptionEvent(subscription *Subscription, channel string, cb fu
 							Content:     SetContent(WS_EVENT_MONITORING, validMessage, nil),
 						}:
 						case <-subsCtx.Done():
-							xtremelog.Error(fmt.Sprintf("Unsubscribing from Redis for RoomId: %s", subscription.RoomId), false)
+							WSLogError(fmt.Sprintf("Unsubscribing from Redis for RoomId: %s", subscription.RoomId), false)
 							return
 						}
 					}
 				}
 			})
 			if err != nil {
-				xtremelog.Error(fmt.Sprintf("Error subscribing to Redis: %v", err), true)
+				WSLogError(fmt.Sprintf("Error subscribing to Redis: %v", err), true)
 				return
 			}
 		}()
@@ -130,7 +129,7 @@ func WSCustomSubscriptionEvent(subscription *Subscription, channel string, cb fu
 		select {
 		case <-subscription.StopChan:
 			cancel()
-			xtremelog.Error(fmt.Sprintf("Stopping goroutine for RoomId on the subscribtion redis: %s", subscription.RoomId), false)
+			WSLogError(fmt.Sprintf("Stopping goroutine for RoomId on the subscribtion redis: %s", subscription.RoomId), false)
 			return
 		}
 	}()
@@ -147,7 +146,7 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, *Subscrip
 
 			roomId = r.Header.Get("X-Room-ID")
 			if roomId == "" {
-				xtremelog.Error("Room ID is required", true)
+				WSLogError("Room ID is required", true)
 				return false
 			}
 
@@ -171,7 +170,7 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, *Subscrip
 
 	conn, err := upgrader.Upgrade(w, r, respHeader)
 	if err != nil {
-		xtremelog.Error(fmt.Sprintf("Error upgrading connection: %v", err), true)
+		WSLogError(fmt.Sprintf("Error upgrading connection: %v", err), true)
 		return nil, nil, nil
 	}
 

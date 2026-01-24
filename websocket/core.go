@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/globalxtreme/gobaseconf/config"
+	"github.com/globalxtreme/gobaseconf/helpers"
+	"github.com/globalxtreme/gobaseconf/helpers/xtremelog"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/websocket"
-	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -69,10 +71,18 @@ const WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING = "ws-channel.async-wo
 const WS_GROUP_ID_ASYNC_WORKFLOW_MONITORING_LIST = "asa.monitoring.list"
 
 var (
-	Hub *hub
+	Hub         *hub
+	WSLogEnable bool
 )
 
 func InitWebSocket() {
+	enableLog := os.Getenv("WEBSOCKET_LOG_ENABLE")
+	if enableLog != "" {
+		WSLogEnable = helpers.ToBool(enableLog)
+	} else {
+		WSLogEnable = true
+	}
+
 	Hub = &hub{
 		Groups:     make(map[string]map[string]bool),
 		Rooms:      make(map[string]*websocket.Conn),
@@ -181,7 +191,7 @@ func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(
 		if err := psc.Subscribe(fullChannel); err != nil {
 			conn.Close()
 
-			//xtremelog.Error(fmt.Sprintf("Failed to subscribe: %v", err), true)
+			WSLogError(fmt.Sprintf("Failed to subscribe: %v", err), true)
 			time.Sleep(retryDelay)
 
 			continue
@@ -213,8 +223,7 @@ func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(
 			psc.Unsubscribe()
 			conn.Close()
 
-			log.Printf(err.Error())
-			//xtremelog.Error(fmt.Sprintf("Redis subscription error: %v — reconnecting...", err), true)
+			WSLogError(fmt.Sprintf("Redis subscription error: %v — reconnecting...", err), true)
 			time.Sleep(retryDelay)
 
 			continue // ⬅️ auto reconnect
@@ -244,4 +253,10 @@ func SetContent(event string, content interface{}, processError error) []byte {
 
 func GetSubscription(r *http.Request) *Subscription {
 	return r.Context().Value(WS_REQUEST_SUBSCRIPTION).(*Subscription)
+}
+
+func WSLogError(message string, bug bool) {
+	if WSLogEnable || bug {
+		xtremelog.Error(message, bug)
+	}
 }
