@@ -333,7 +333,28 @@ func ConsumeWorkflow(options []AsyncWorkflowConsumeOpt) {
 								if requeue >= maxRequeue {
 									d.Nack(false, false)
 								} else {
-									d.Nack(false, true)
+									headers := d.Headers
+									if headers == nil {
+										headers = amqp091.Table{}
+									}
+									headers["x-retry"] = requeue + 1
+
+									correlationId, _ := exec.Command("uuidgen").Output()
+									_ = ch.Publish(
+										"",
+										opt.Queue,
+										false,
+										false,
+										amqp091.Publishing{
+											Headers:       headers,
+											Body:          d.Body,
+											ContentType:   d.ContentType,
+											CorrelationId: string(correlationId),
+											DeliveryMode:  amqp091.Persistent,
+										},
+									)
+
+									d.Ack(false)
 								}
 							} else {
 								d.Ack(false)
@@ -879,20 +900,12 @@ func getRequeueCount(d amqp091.Delivery) int {
 		return 0
 	}
 
-	xDeathRaw, ok := d.Headers["x-death"]
-	if !ok {
-		return 0
+	if v, ok := d.Headers["x-retry"].(int32); ok {
+		return int(v)
 	}
 
-	xDeaths, ok := xDeathRaw.([]interface{})
-	if !ok || len(xDeaths) == 0 {
-		return 0
-	}
-
-	xDeath := xDeaths[0].(amqp091.Table)
-
-	if count, ok := xDeath["count"].(int64); ok {
-		return int(count)
+	if v, ok := d.Headers["x-retry"].(int64); ok {
+		return int(v)
 	}
 
 	return 0
