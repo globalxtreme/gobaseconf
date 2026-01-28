@@ -272,6 +272,8 @@ func ConsumeWorkflow(options []AsyncWorkflowConsumeOpt) {
 	}
 	defer conn.Close()
 
+	maxRequeue := 5
+
 	for _, opt := range options {
 		opt := opt
 
@@ -327,7 +329,12 @@ func ConsumeWorkflow(options []AsyncWorkflowConsumeOpt) {
 						go func() {
 							err = processWorkflow(opt, redisConn, d.Body)
 							if err != nil {
-								d.Nack(false, true)
+								requeue := getRequeueCount(d)
+								if requeue >= maxRequeue {
+									d.Nack(false, false)
+								} else {
+									d.Nack(false, true)
+								}
 							} else {
 								d.Ack(false)
 							}
@@ -865,4 +872,28 @@ func getAllowResendInterval(conn redis.Conn) time.Duration {
 	}
 
 	return time.Duration(intervalInt) * time.Minute
+}
+
+func getRequeueCount(d amqp091.Delivery) int {
+	if d.Headers == nil {
+		return 0
+	}
+
+	xDeathRaw, ok := d.Headers["x-death"]
+	if !ok {
+		return 0
+	}
+
+	xDeaths, ok := xDeathRaw.([]interface{})
+	if !ok || len(xDeaths) == 0 {
+		return 0
+	}
+
+	xDeath := xDeaths[0].(amqp091.Table)
+
+	if count, ok := xDeath["count"].(int64); ok {
+		return int(count)
+	}
+
+	return 0
 }
