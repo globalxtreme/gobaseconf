@@ -338,6 +338,7 @@ func ConsumeWorkflow(options []AsyncWorkflowConsumeOpt) {
 										headers = amqp091.Table{}
 									}
 									headers["x-retry"] = requeue + 1
+									headers["x-delay"] = int32(10000) // 10 * (1000 milliseconds)
 
 									correlationId, _ := exec.Command("uuidgen").Output()
 									_ = ch.Publish(
