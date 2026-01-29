@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -173,7 +174,7 @@ func (flow *GXAsyncWorkflow) Push() {
 
 	pushWorkflowMessage(workflow.ID, flow.firstStep.stepOrder, flow.firstStep.Queue, flow.firstStep.Payload)
 
-	//sendToMonitoringEvent(workflow, redisConn)
+	sendToMonitoringEvent(workflow, redisConn)
 }
 
 type AsyncWorkflowConsumerInterface interface {
@@ -321,46 +322,44 @@ func ConsumeWorkflow(options []AsyncWorkflowConsumeOpt) {
 			jobs := make(chan amqp091.Delivery, workerCount)
 
 			for i := 0; i < workerCount; i++ {
-				redisConn := config.RedisAsyncWorkflowPool.Get()
-				defer redisConn.Close()
-
 				go func() {
 					for d := range jobs {
-						go func() {
-							err = processWorkflow(opt, redisConn, d.Body)
-							if err != nil {
-								requeue := getRequeueCount(d)
-								if requeue >= maxRequeue {
-									d.Nack(false, false)
-								} else {
-									headers := d.Headers
-									if headers == nil {
-										headers = amqp091.Table{}
-									}
-									headers["x-retry"] = requeue + 1
-									headers["x-delay"] = int32(10000) // 10 * (1000 milliseconds)
+						redisConn := config.RedisAsyncWorkflowPool.Get()
+						err = processWorkflow(opt, redisConn, d.Body)
+						redisConn.Close()
 
-									correlationId, _ := exec.Command("uuidgen").Output()
-									_ = ch.Publish(
-										"",
-										opt.Queue,
-										false,
-										false,
-										amqp091.Publishing{
-											Headers:       headers,
-											Body:          d.Body,
-											ContentType:   d.ContentType,
-											CorrelationId: string(correlationId),
-											DeliveryMode:  amqp091.Persistent,
-										},
-									)
-
-									d.Ack(false)
-								}
+						if err != nil {
+							requeue := getRequeueCount(d)
+							if requeue >= maxRequeue {
+								d.Nack(false, false)
 							} else {
+								headers := d.Headers
+								if headers == nil {
+									headers = amqp091.Table{}
+								}
+								headers["x-retry"] = requeue + 1
+								headers["x-delay"] = int32(10000) // 10 * (1000 milliseconds)
+
+								correlationId, _ := exec.Command("uuidgen").Output()
+								_ = ch.Publish(
+									"",
+									opt.Queue,
+									false,
+									false,
+									amqp091.Publishing{
+										Headers:       headers,
+										Body:          d.Body,
+										ContentType:   d.ContentType,
+										CorrelationId: string(correlationId),
+										DeliveryMode:  amqp091.Persistent,
+									},
+								)
+
 								d.Ack(false)
 							}
-						}()
+						} else {
+							d.Ack(false)
+						}
 					}
 				}()
 			}
@@ -445,9 +444,10 @@ func processingWorkflow(workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowS
 	if workflow.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID {
 		workflow.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID
 
-		err := RabbitMQSQL.Where("id = ?", workflow.ID).
-			Updates(&rabbitmqmodel.RabbitMQAsyncWorkflow{
-				StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID,
+		err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflow{}).
+			Where("id = ?", workflow.ID).
+			Updates(map[string]interface{}{
+				"statusId": RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow to processing: %s", err), true)
@@ -457,16 +457,17 @@ func processingWorkflow(workflow *rabbitmqmodel.RabbitMQAsyncWorkflow, workflowS
 	if workflowStep.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID {
 		workflowStep.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID
 
-		err := RabbitMQSQL.Where("id = ?", workflowStep.ID).
-			Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-				StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID,
+		err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{}).
+			Where("id = ?", workflowStep.ID).
+			Updates(map[string]interface{}{
+				"statusId": RABBITMQ_ASYNC_WORKFLOW_STATUS_PROCESSING_ID,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow step to processing: %s", err), true)
 		}
 	}
 
-	//sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
+	sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
 }
 
 func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep, redisConn redis.Conn, result interface{}, forwardPayloads []AsyncWorkflowForwardPayloadResult) {
@@ -479,10 +480,11 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		stepResponseMap = *workflowStep.Response
 	}
 
-	err := RabbitMQSQL.Where("id = ?", workflowStep.ID).
-		Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-			StatusId: workflowStep.StatusId,
-			Response: workflowStep.Response,
+	err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{}).
+		Where("id = ?", workflowStep.ID).
+		Updates(map[string]interface{}{
+			"statusId": workflowStep.StatusId,
+			"response": workflowStep.Response,
 		}).Error
 	if err != nil {
 		xtremelog.Error(fmt.Sprintf("Error updating workflow step status to finish: %s", err), true)
@@ -492,10 +494,11 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		workflow.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID
 		workflow.AllowResendAt = nil
 
-		err := RabbitMQSQL.Where("id = ?", workflow.ID).
-			Updates(&rabbitmqmodel.RabbitMQAsyncWorkflow{
-				StatusId:      RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID,
-				AllowResendAt: nil,
+		err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflow{}).
+			Where("id = ?", workflow.ID).
+			Updates(map[string]interface{}{
+				"statusId":      RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID,
+				"allowResendAt": nil,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow to finish: %s", err), true)
@@ -512,9 +515,10 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		allowResendAt := time.Now().Add(getAllowResendInterval(redisConn))
 		workflow.AllowResendAt = &allowResendAt
 
-		err = RabbitMQSQL.Where("id = ?", workflow.ID).
-			Updates(&rabbitmqmodel.RabbitMQAsyncWorkflow{
-				AllowResendAt: &allowResendAt,
+		err = RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflow{}).
+			Where("id = ?", workflow.ID).
+			Updates(map[string]interface{}{
+				"allowResendAt": allowResendAt,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow allow resend time: %s", err), true)
@@ -566,9 +570,10 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 
 				originForwardPayload[workflowStep.Queue] = forwardStepPayload
 
-				err = RabbitMQSQL.Where("id = ?", forwardStep.ID).
-					Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-						ForwardPayload: (*model.MapInterfaceColumn)(&originForwardPayload),
+				err = RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{}).
+					Where("id = ?", forwardStep.ID).
+					Updates(map[string]interface{}{
+						"forwardPayload": originForwardPayload,
 					}).Error
 				if err != nil {
 					xtremelog.Error(fmt.Sprintf("Unable to update forward payload to next step. Step Order (%d): %s", (workflowStep.StepOrder+1), err), true)
@@ -584,9 +589,10 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		if resOk && len(stepResponseMap) > 0 {
 			payload = stepResponseMap
 
-			err = RabbitMQSQL.Where("id = ?", nextStep.ID).
-				Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-					Payload: (*model.MapInterfaceColumn)(&stepResponseMap),
+			err = RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{}).
+				Where("id = ?", nextStep.ID).
+				Updates(map[string]interface{}{
+					"payload": stepResponseMap,
 				}).Error
 			if err != nil {
 				xtremelog.Error(fmt.Sprintf("Unable to update payload to next step. Step Order (%d): %s", (workflowStep.StepOrder+1), err), true)
@@ -603,7 +609,7 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 	}
 
 	if workflow.StatusId == RABBITMQ_ASYNC_WORKFLOW_STATUS_SUCCESS_ID {
-		//sendToMonitoringEvent(workflow, redisConn)
+		sendToMonitoringEvent(workflow, redisConn)
 
 		successMsg := workflow.SuccessMessage
 		if successMsg == "" {
@@ -612,24 +618,49 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		pushToNotification(workflow, workflowStep, successMsg, successMsg, "success")
 	}
 
-	//sendToMonitoringActionEvent(workflow, workflowStep, redisConn)
+	sendToMonitoringActionEvent(workflow, workflowStep, redisConn)
 }
 
 func sendToMonitoringEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, redisConn redis.Conn) {
-	err := xtremews.Publish(
-		xtremews.WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING, xtremews.WS_GROUP_ID_ASYNC_WORKFLOW_MONITORING_LIST,
-		xtremews.WS_EVENT_MONITORING,
-		map[string]interface{}{
-			"id":        workflow.ID,
-			"service":   workflow.ReferenceService,
-			"createdBy": workflow.CreatedBy,
-		}, redisConn)
+	var err error
+
+	isRetry := false
+	maxErr := 3
+	for i := 1; i <= maxErr; i++ {
+		publishToEvent := func(redisConn ...redis.Conn) error {
+			return xtremews.Publish(
+				xtremews.WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING, xtremews.WS_GROUP_ID_ASYNC_WORKFLOW_MONITORING_LIST,
+				xtremews.WS_EVENT_MONITORING,
+				map[string]interface{}{
+					"id":        workflow.ID,
+					"service":   workflow.ReferenceService,
+					"createdBy": workflow.CreatedBy,
+				}, redisConn...)
+		}
+
+		if isRetry {
+			err = publishToEvent()
+		} else {
+			err = publishToEvent(redisConn)
+		}
+
+		if err == nil {
+			return
+		} else {
+			isRetry = true
+
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+
 	if err != nil {
 		xtremelog.Error(fmt.Sprintf("Unable to send data to monitoring event. %s", err), true)
 	}
 }
 
 func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep rabbitmqmodel.RabbitMQAsyncWorkflowStep, redisConn redis.Conn) {
+	var err error
+
 	var allowResendAt interface{}
 	if workflow.AllowResendAt != nil {
 		allowResendAt = workflow.AllowResendAt.Format("02/01/2006 15:04:05")
@@ -667,12 +698,33 @@ func sendToMonitoringActionEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, w
 		},
 	}
 
-	err := xtremews.Publish(
-		xtremews.WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING, fmt.Sprintf("%s-%s", workflow.Action, workflow.ReferenceId),
-		xtremews.WS_EVENT_MONITORING,
-		result, redisConn)
+	isRetry := false
+	maxErr := 3
+	for i := 1; i <= maxErr; i++ {
+		publishToEvent := func(redisConn ...redis.Conn) error {
+			return xtremews.Publish(
+				xtremews.WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING, fmt.Sprintf("%s-%s", workflow.Action, workflow.ReferenceId),
+				xtremews.WS_EVENT_MONITORING,
+				result, redisConn...)
+		}
+
+		if isRetry {
+			err = publishToEvent()
+		} else {
+			err = publishToEvent(redisConn)
+		}
+
+		if err == nil {
+			return
+		} else {
+			isRetry = true
+
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+
 	if err != nil {
-		xtremelog.Error(fmt.Sprintf("Unable to send data to monitoring by action event. Step Order (%d): %s", (workflowStep.StepOrder+1), err), true)
+		xtremelog.Error(fmt.Sprintf("Unable to send data to monitoring by action event. Step Order (%d): %s", workflowStep.StepOrder, err.Error()), true)
 	}
 }
 
@@ -693,10 +745,11 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 		workflowStep.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID
 		workflowStep.Errors = (*model.ArrayMapInterfaceColumn)(&stepErrors)
 
-		err := RabbitMQSQL.Where("id = ?", workflowStep.ID).
-			Updates(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{
-				StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID,
-				Errors:   (*model.ArrayMapInterfaceColumn)(&stepErrors),
+		err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{}).
+			Where("id = ?", workflowStep.ID).
+			Updates(map[string]interface{}{
+				"statusId": RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID,
+				"errors":   stepErrors,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow step to error: %s", err), true)
@@ -707,9 +760,10 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 	if workflowIsValid && workflow.StatusId != RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID {
 		workflow.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID
 
-		err := RabbitMQSQL.Where("id = ?", workflow.ID).
-			Updates(&rabbitmqmodel.RabbitMQAsyncWorkflow{
-				StatusId: RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID,
+		err := RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflow{}).
+			Where("id = ?", workflow.ID).
+			Updates(map[string]interface{}{
+				"statusId": RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow to error: %s", err), true)
@@ -717,8 +771,8 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 	}
 
 	if workflowIsValid && workflowStepIsValid {
-		//sendToMonitoringEvent(*workflow, redisConn)
-		//sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
+		sendToMonitoringEvent(*workflow, redisConn)
+		sendToMonitoringActionEvent(*workflow, *workflowStep, redisConn)
 
 		errTitle := workflow.ErrorMessage
 		if errTitle == "" {
@@ -803,7 +857,7 @@ func pushToNotification(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, step rabbi
 		message := fmt.Sprintf("*ERROR ASA:* %d\n", workflow.ID)
 		message += fmt.Sprintf("*Action:* %s\n", workflow.Action)
 		message += fmt.Sprintf("*Reference:* %s:%s\n", workflow.ReferenceType, workflow.ReferenceId)
-		message += fmt.Sprintf("*Service:* %s\n\n", workflow.ReferenceService)
+		message += fmt.Sprintf("*Service:* %s\n\n", strings.Replace(workflow.ReferenceService, "_", "-", -1))
 
 		message += fmt.Sprintf("*Step:* %d\n", step.StepOrder)
 		message += fmt.Sprintf("*Service:* %s\n", step.Service)
