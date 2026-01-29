@@ -2,6 +2,8 @@ package grpc
 
 import (
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"log"
 	"net"
 )
@@ -9,6 +11,7 @@ import (
 type GRPCServer struct {
 	listener net.Listener
 	server   *grpc.Server
+	health   *health.Server
 }
 
 type GRPCServerRegister interface {
@@ -20,10 +23,17 @@ func (srv *GRPCServer) NewServer(address string) *GRPCServer {
 	if err != nil {
 		log.Panicf("Failed to listen: %v", err)
 	}
+
 	s := grpc.NewServer()
+
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(s, healthServer)
+
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	srv.listener = lis
 	srv.server = s
+	srv.health = healthServer
 
 	return srv
 }
@@ -38,4 +48,16 @@ func (srv *GRPCServer) Register(interfaces ...GRPCServerRegister) *GRPCServer {
 
 func (srv *GRPCServer) Serve() error {
 	return srv.server.Serve(srv.listener)
+}
+
+func (srv *GRPCServer) SetHealth(isHealthy bool) {
+	if srv.health == nil {
+		return
+	}
+
+	if isHealthy {
+		srv.health.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	} else {
+		srv.health.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+	}
 }
