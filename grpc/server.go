@@ -4,6 +4,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 )
@@ -30,6 +31,8 @@ func (srv *GRPCServer) NewServer(address string) *GRPCServer {
 	grpc_health_v1.RegisterHealthServer(s, healthServer)
 
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	reflection.Register(s)
 
 	srv.listener = lis
 	srv.server = s
