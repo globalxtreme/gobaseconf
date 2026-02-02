@@ -77,10 +77,15 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 		}
 
 		for {
-			_, message, err = conn.ReadMessage()
+			var msgType int
+			msgType, message, err = conn.ReadMessage()
 			if err != nil {
 				WSLogError(fmt.Sprintf("Error reading message: %v", err), false)
 				return
+			}
+
+			if msgType != websocket.TextMessage {
+				continue
 			}
 
 			ctx = context.WithValue(ctx, WS_REQUEST_MESSAGE, message)
