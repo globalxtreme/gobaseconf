@@ -59,10 +59,12 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 				for {
 					select {
 					case <-tinker.C:
-						Hub.Broadcast <- Message{
-							MessageType: websocket.TextMessage,
-							RoomId:      subscription.RoomId,
-							Content:     handleCallback(WS_EVENT_ROUTINE, r.WithContext(ctx)),
+						if intervalRes := handleCallback(defaultEvent, r.WithContext(ctx)); intervalRes != nil {
+							Hub.Broadcast <- Message{
+								MessageType: websocket.TextMessage,
+								RoomId:      subscription.RoomId,
+								Content:     intervalRes,
+							}
 						}
 					case <-subscription.StopChan:
 						WSLogError(fmt.Sprintf("Stopping goroutine for RoomId: %s", subscription.RoomId), false)
@@ -91,11 +93,13 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 			}
 
 			ctx = context.WithValue(ctx, WS_REQUEST_MESSAGE, message)
-			Hub.Broadcast <- Message{
-				MessageType: websocket.TextMessage,
-				GroupId:     subscription.GroupId,
-				RoomId:      subscription.RoomId,
-				Content:     handleCallback(defaultEvent, r.WithContext(ctx)),
+			if msgRes := handleCallback(defaultEvent, r.WithContext(ctx)); msgRes != nil {
+				Hub.Broadcast <- Message{
+					MessageType: websocket.TextMessage,
+					GroupId:     subscription.GroupId,
+					RoomId:      subscription.RoomId,
+					Content:     msgRes,
+				}
 			}
 		}
 	}).Methods("GET")
