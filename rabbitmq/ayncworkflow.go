@@ -569,11 +569,12 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 				remappingForwardPayload(newForwardPayload, &forwardStepPayload)
 
 				originForwardPayload[workflowStep.Queue] = forwardStepPayload
+				originForwardPayloadColumn := model.MapInterfaceColumn(originForwardPayload)
 
 				err = RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{}).
 					Where("id = ?", forwardStep.ID).
 					Updates(map[string]interface{}{
-						"forwardPayload": originForwardPayload,
+						"forwardPayload": &originForwardPayloadColumn,
 					}).Error
 				if err != nil {
 					xtremelog.Error(fmt.Sprintf("Unable to update forward payload to next step. Step Order (%d): %s", (workflowStep.StepOrder+1), err), true)
@@ -588,11 +589,12 @@ func finishWorkflow(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, workflowStep r
 		payload := make(map[string]interface{})
 		if resOk && len(stepResponseMap) > 0 {
 			payload = stepResponseMap
+			payloadColumn := model.MapInterfaceColumn(stepResponseMap)
 
 			err = RabbitMQSQL.Model(&rabbitmqmodel.RabbitMQAsyncWorkflowStep{}).
 				Where("id = ?", nextStep.ID).
 				Updates(map[string]interface{}{
-					"payload": stepResponseMap,
+					"payload": &payloadColumn,
 				}).Error
 			if err != nil {
 				xtremelog.Error(fmt.Sprintf("Unable to update payload to next step. Step Order (%d): %s", (workflowStep.StepOrder+1), err), true)
@@ -741,6 +743,7 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 		//}
 
 		stepErrors = append(stepErrors, exceptionRes)
+		stepErrorsColumn := model.ArrayMapInterfaceColumn(stepErrors)
 
 		workflowStep.StatusId = RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID
 		workflowStep.Errors = (*model.ArrayMapInterfaceColumn)(&stepErrors)
@@ -749,7 +752,7 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 			Where("id = ?", workflowStep.ID).
 			Updates(map[string]interface{}{
 				"statusId": RABBITMQ_ASYNC_WORKFLOW_STATUS_ERROR_ID,
-				"errors":   stepErrors,
+				"errors":   &stepErrorsColumn,
 			}).Error
 		if err != nil {
 			xtremelog.Error(fmt.Sprintf("Unable to update async workflow step to error: %s", err), true)
