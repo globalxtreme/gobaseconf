@@ -39,14 +39,16 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 		hdlOpt := WSHandlerOption{}
 		handleCallback := func(event string, r *http.Request) []byte {
 			result, err := cb(r, &hdlOpt)
-			return SetContent(event, result, err)
+			if result != nil {
+				return SetContent(event, result, err)
+			}
+
+			return nil
 		}
 
 		ctx = context.WithValue(ctx, WS_REQUEST_MESSAGE, message)
-		Hub.Broadcast <- Message{
-			MessageType: websocket.TextMessage,
-			RoomId:      subscription.RoomId,
-			Content:     handleCallback(defaultEvent, r.WithContext(ctx)),
+		if initRes := handleCallback(defaultEvent, r.WithContext(ctx)); initRes != nil {
+			_ = conn.WriteMessage(websocket.TextMessage, initRes)
 		}
 
 		if option.Interval > 0 {
