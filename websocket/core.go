@@ -46,6 +46,7 @@ type WSOption struct {
 
 type WSHandlerOption struct {
 	HasSubscribedEvent bool
+	HasInitialFetch    bool
 }
 
 // ** --- EVENT --- */
