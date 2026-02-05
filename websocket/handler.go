@@ -39,14 +39,16 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 		hdlOpt := WSHandlerOption{}
 		handleCallback := func(event string, r *http.Request) []byte {
 			result, err := cb(r, &hdlOpt)
-			return SetContent(event, result, err)
+			if result != nil {
+				return SetContent(event, result, err)
+			}
+
+			return nil
 		}
 
 		ctx = context.WithValue(ctx, WS_REQUEST_MESSAGE, message)
-		Hub.Broadcast <- Message{
-			MessageType: websocket.TextMessage,
-			RoomId:      subscription.RoomId,
-			Content:     handleCallback(defaultEvent, r.WithContext(ctx)),
+		if initRes := handleCallback(defaultEvent, r.WithContext(ctx)); initRes != nil {
+			_ = conn.WriteMessage(websocket.TextMessage, initRes)
 		}
 
 		if option.Interval > 0 {
@@ -57,10 +59,12 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 				for {
 					select {
 					case <-tinker.C:
-						Hub.Broadcast <- Message{
-							MessageType: websocket.TextMessage,
-							RoomId:      subscription.RoomId,
-							Content:     handleCallback(WS_EVENT_ROUTINE, r.WithContext(ctx)),
+						if intervalRes := handleCallback(defaultEvent, r.WithContext(ctx)); intervalRes != nil {
+							Hub.Broadcast <- Message{
+								MessageType: websocket.TextMessage,
+								RoomId:      subscription.RoomId,
+								Content:     intervalRes,
+							}
 						}
 					case <-subscription.StopChan:
 						WSLogError(fmt.Sprintf("Stopping goroutine for RoomId: %s", subscription.RoomId), false)
@@ -77,18 +81,29 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 		}
 
 		for {
-			_, message, err = conn.ReadMessage()
+			var msgType int
+			msgType, message, err = conn.ReadMessage()
 			if err != nil {
 				WSLogError(fmt.Sprintf("Error reading message: %v", err), false)
 				return
 			}
 
+			if msgType != websocket.TextMessage {
+				continue
+			}
+
 			ctx = context.WithValue(ctx, WS_REQUEST_MESSAGE, message)
-			Hub.Broadcast <- Message{
-				MessageType: websocket.TextMessage,
-				GroupId:     subscription.GroupId,
-				RoomId:      subscription.RoomId,
-				Content:     handleCallback(defaultEvent, r.WithContext(ctx)),
+			if msgRes := handleCallback(defaultEvent, r.WithContext(ctx)); msgRes != nil {
+				if option.IsMonitoring {
+					_ = conn.WriteMessage(websocket.TextMessage, msgRes)
+				} else {
+					Hub.Broadcast <- Message{
+						MessageType: websocket.TextMessage,
+						GroupId:     subscription.GroupId,
+						RoomId:      subscription.RoomId,
+						Content:     msgRes,
+					}
+				}
 			}
 		}
 	}).Methods("GET")

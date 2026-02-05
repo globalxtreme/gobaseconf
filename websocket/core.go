@@ -42,10 +42,12 @@ type WSOption struct {
 	Interval     int
 	Channel      string
 	DefaultEvent string
+	IsMonitoring bool
 }
 
 type WSHandlerOption struct {
 	HasSubscribedEvent bool
+	HasInitialFetch    bool
 }
 
 // ** --- EVENT --- */
