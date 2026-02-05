@@ -80,21 +80,23 @@ func WSHandleFunc(router *mux.Router, path string, cb func(r *http.Request, opt 
 			})
 		}
 
-		if !option.IsMonitoring {
-			for {
-				var msgType int
-				msgType, message, err = conn.ReadMessage()
-				if err != nil {
-					WSLogError(fmt.Sprintf("Error reading message: %v", err), false)
-					return
-				}
+		for {
+			var msgType int
+			msgType, message, err = conn.ReadMessage()
+			if err != nil {
+				WSLogError(fmt.Sprintf("Error reading message: %v", err), false)
+				return
+			}
 
-				if msgType != websocket.TextMessage {
-					continue
-				}
+			if msgType != websocket.TextMessage {
+				continue
+			}
 
-				ctx = context.WithValue(ctx, WS_REQUEST_MESSAGE, message)
-				if msgRes := handleCallback(defaultEvent, r.WithContext(ctx)); msgRes != nil {
+			ctx = context.WithValue(ctx, WS_REQUEST_MESSAGE, message)
+			if msgRes := handleCallback(defaultEvent, r.WithContext(ctx)); msgRes != nil {
+				if option.IsMonitoring {
+					_ = conn.WriteMessage(websocket.TextMessage, msgRes)
+				} else {
 					Hub.Broadcast <- Message{
 						MessageType: websocket.TextMessage,
 						GroupId:     subscription.GroupId,
