@@ -634,9 +634,11 @@ func sendToMonitoringEvent(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, redisCo
 				xtremews.WS_CHANNEL_MESSAGE_BROKER_ASYNC_WORKFLOW_MONITORING, xtremews.WS_GROUP_ID_ASYNC_WORKFLOW_MONITORING_LIST,
 				xtremews.WS_EVENT_MONITORING,
 				map[string]interface{}{
-					"id":        workflow.ID,
-					"service":   workflow.ReferenceService,
-					"createdBy": workflow.CreatedBy,
+					"id":            workflow.ID,
+					"service":       workflow.ReferenceService,
+					"referenceId":   workflow.ReferenceId,
+					"referenceType": workflow.ReferenceType,
+					"createdBy":     workflow.CreatedBy,
 				}, redisConn...)
 		}
 
