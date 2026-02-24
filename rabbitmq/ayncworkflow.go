@@ -788,9 +788,9 @@ func failedWorkflow(redisConn redis.Conn, message string, err error, trace []byt
 }
 
 func pushWorkflowMessage(workflowId uint, stepOrder int, queue string, payload interface{}) {
-	conn, ok := RabbitMQConnectionDial[RABBITMQ_CONNECTION_GLOBAL]
-	if !ok {
-		log.Panicf("Please init rabbitmq connection first")
+	conn, err := getRabbitMQASAConnection()
+	if err != nil {
+		log.Panicf("Unable to get rabbitmq connection. %s", err.Error())
 	}
 
 	ch, err := conn.Channel()
@@ -835,6 +835,25 @@ func pushWorkflowMessage(workflowId uint, stepOrder int, queue string, payload i
 	if err != nil {
 		log.Panicf("Failed to send a message: %s", err)
 	}
+}
+
+func getRabbitMQASAConnection() (*amqp091.Connection, error) {
+	conn := RabbitMQConnectionDial[RABBITMQ_CONNECTION_GLOBAL]
+
+	if conn == nil || conn.IsClosed() {
+		conf := RabbitMQConf.Connection[RABBITMQ_CONNECTION_GLOBAL]
+
+		newConn, err := amqp091.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/",
+			conf.Username, conf.Password, conf.Host, conf.Port))
+		if err != nil {
+			return nil, err
+		}
+
+		RabbitMQConnectionDial[RABBITMQ_CONNECTION_GLOBAL] = newConn
+		return newConn, nil
+	}
+
+	return conn, nil
 }
 
 func pushToNotification(workflow rabbitmqmodel.RabbitMQAsyncWorkflow, step rabbitmqmodel.RabbitMQAsyncWorkflowStep, title, body, status string) {

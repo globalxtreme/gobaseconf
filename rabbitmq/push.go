@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	rabbitmqmodel "github.com/globalxtreme/gobaseconf/model/rabbitmq"
 	"github.com/rabbitmq/amqp091-go"
 	"log"
@@ -176,9 +177,9 @@ func (mq *RabbitMQ) setupMessage() *RabbitMQ {
 }
 
 func (mq *RabbitMQ) publishMessage() {
-	conn, ok := RabbitMQConnectionDial[mq.Connection]
-	if !ok {
-		log.Panicf("Please init rabbitmq connection first")
+	conn, err := mq.getRabbitMQConnection()
+	if err != nil {
+		log.Panicf("Unable to get rabbitmq connection: %s", err.Error())
 	}
 
 	ch, err := conn.Channel()
@@ -255,4 +256,22 @@ func (mq *RabbitMQ) publishMessage() {
 			log.Panicf("Failed to send a message: %s", err)
 		}
 	}
+}
+
+func (mq *RabbitMQ) getRabbitMQConnection() (*amqp091.Connection, error) {
+	conn := RabbitMQConnectionDial[mq.Connection]
+
+	if conn == nil || conn.IsClosed() {
+		conf := RabbitMQConf.Connection[mq.Connection]
+
+		newConn, err := amqp091.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", conf.Username, conf.Password, conf.Host, conf.Port))
+		if err != nil {
+			return nil, err
+		}
+
+		RabbitMQConnectionDial[mq.Connection] = newConn
+		return newConn, nil
+	}
+
+	return conn, nil
 }
