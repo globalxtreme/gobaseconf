@@ -193,7 +193,7 @@ func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(
 		if err := psc.Subscribe(fullChannel); err != nil {
 			conn.Close()
 
-			WSLogError(fmt.Sprintf("Failed to subscribe: %v", err), true)
+			WSLogError(fmt.Sprintf("Failed to subscribe: %v", err), false)
 			time.Sleep(retryDelay)
 
 			continue
@@ -225,7 +225,7 @@ func Subscribe(ctx context.Context, channel, groupId string, handleMessage func(
 			psc.Unsubscribe()
 			conn.Close()
 
-			WSLogError(fmt.Sprintf("Redis subscription error: %v — reconnecting...", err), true)
+			WSLogError(fmt.Sprintf("Redis subscription error: %v — reconnecting...", err), false)
 			time.Sleep(retryDelay)
 
 			continue // ⬅️ auto reconnect
