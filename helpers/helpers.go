@@ -1,12 +1,18 @@
 package helpers
 
 import (
+	"google.golang.org/grpc/status"
 	"math/rand"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+type Numeric interface {
+	uint | int | int8 | int16 | int32 | int64 | float32 | float64
+}
 
 func FullDateTimeLayout() string {
 	return "02/01/2006 15:04:05"
@@ -72,24 +78,62 @@ func SetStorageAppPublicDir(path ...string) string {
 }
 
 func StringToArrayInt(text string) []int {
-	var array []int
-	texts := strings.Split(text, ",")
-	for _, value := range texts {
-		item, _ := strconv.Atoi(value)
-		array = append(array, item)
+	re := regexp.MustCompile(`[^0-9\-.]`)
+	text = re.ReplaceAllString(text, " ")
+
+	re = regexp.MustCompile(`\s+`)
+	text = re.ReplaceAllString(text, " ")
+
+	words := strings.Split(text, " ")
+
+	var result []int
+	for _, word := range words {
+		if word != "" {
+			number, _ := strconv.Atoi(word)
+			result = append(result, number)
+		}
 	}
 
-	return array
+	return result
+}
+
+func StringToArrayNumeric[N Numeric](text string) []N {
+	re := regexp.MustCompile(`[^0-9\-.]`)
+	text = re.ReplaceAllString(text, " ")
+
+	re = regexp.MustCompile(`\s+`)
+	text = re.ReplaceAllString(text, " ")
+
+	words := strings.Split(text, " ")
+
+	var result []N
+	for _, word := range words {
+		if word != "" {
+			number, _ := strconv.ParseFloat(word, 64)
+			result = append(result, N(number))
+		}
+	}
+
+	return result
 }
 
 func StringToArrayString(text string) []string {
-	var array []string
-	texts := strings.Split(text, ",")
-	for _, value := range texts {
-		array = append(array, value)
+	re := regexp.MustCompile(`[^A-Za-z0-9\-.]`)
+	text = re.ReplaceAllString(text, " ")
+
+	re = regexp.MustCompile(`\s+`)
+	text = re.ReplaceAllString(text, " ")
+
+	words := strings.Split(text, " ")
+
+	var result []string
+	for _, word := range words {
+		if word != "" {
+			result = append(result, word)
+		}
 	}
 
-	return array
+	return result
 }
 
 func ToInt(text string) int {
@@ -105,4 +149,18 @@ func ToBool(text string) bool {
 func ToFloat64(text string) float64 {
 	value, _ := strconv.ParseFloat(text, 64)
 	return value
+}
+
+func ToNumeric[N Numeric](text string) N {
+	number, _ := strconv.ParseFloat(text, 64)
+	return N(number)
+}
+
+func GRPCErrorMessage(err error) string {
+	st, ok := status.FromError(err)
+	if ok {
+		return st.Message()
+	} else {
+		return err.Error()
+	}
 }
