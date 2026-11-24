@@ -25,7 +25,7 @@ import (
 //
 //	ASA_WEBHOOK_TIMEOUT batas waktu panggilan dalam detik (default 10)
 const (
-	// Prefix URL webhook ASA; path node Webhook ditulis sesudahnya
+	// Prefix URL webhook ASA; path node Webhook disambung sesudahnya dengan satu "/"
 	ASA_WEBHOOK_PREFIX = "/api/webhook/v1/asa-automations"
 
 	ASA_WEBHOOK_DEFAULT_TIMEOUT = 10 * time.Second
@@ -37,7 +37,7 @@ const (
 // Webhook memulai workflow ASA lewat node Webhook (trigger) dari service mana pun.
 //
 //	hook := xtremeasa.Webhook{
-//		Path: "/wo-created",
+//		Path: "wo-created",
 //		Data: map[string]interface{}{"woNumber": "WO-2026-00123"},
 //	}
 //	hook.Push() // panggil SETELAH transaction commit
@@ -50,7 +50,8 @@ const (
 //
 // Panggilan tidak diulang otomatis: setiap panggilan yang diterima membuat satu eksekusi baru.
 type Webhook struct {
-	// Path node Webhook, mis. "/wo-created". Wajib
+	// Path node Webhook tanpa "/" di depan, mis. "wo-created". Wajib. Slash ditambahkan otomatis oleh package;
+	// slash di awal atau akhir yang ikut tertulis dibuang, sehingga hasilnya tetap ".../wo-created"
 	Path string
 
 	// Method node Webhook. Default POST
@@ -100,6 +101,9 @@ func (hook Webhook) Push() WebhookResult {
 // Pada status di luar 2xx, result tetap berisi jawaban ASA.
 func (hook Webhook) TryPush() (WebhookResult, error) {
 	var result WebhookResult
+
+	// Slash di awal atau akhir dibuang; package yang menyambungnya ke prefix dengan satu "/"
+	hook.Path = strings.Trim(strings.TrimSpace(hook.Path), "/")
 
 	req, err := hook.request()
 	if err != nil {
@@ -154,7 +158,7 @@ func (hook Webhook) TryPush() (WebhookResult, error) {
 /** --- UNEXPORTED FUNCTIONS --- */
 
 func (hook Webhook) request() (*http.Request, error) {
-	path := strings.Trim(hook.Path, "/")
+	path := hook.Path
 	if path == "" {
 		return nil, errors.New("ASA webhook path is required")
 	}

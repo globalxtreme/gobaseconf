@@ -37,7 +37,7 @@ func TestPushSendsRequestAndReadsExecution(t *testing.T) {
 	})
 
 	result := Webhook{
-		Path:    "/wo-created",
+		Path:    "wo-created",
 		Data:    map[string]interface{}{"woNumber": "WO-1"},
 		Query:   url.Values{"source": {"crm"}},
 		Headers: map[string]string{"X-Request-Id": "req-1"},
@@ -187,4 +187,31 @@ func TestPushPanicsWithResponseError(t *testing.T) {
 	}()
 
 	Webhook{}.Push()
+}
+
+func TestTryPushNormalizesPathSlashes(t *testing.T) {
+	var got *http.Request
+
+	serve(t, func(w http.ResponseWriter, r *http.Request) {
+		got = r
+		_, _ = w.Write([]byte(`{}`))
+	})
+
+	for _, path := range []string{"wo-created", "/wo-created", "wo-created/", "//wo-created//", " /wo-created "} {
+		if _, err := (Webhook{Path: path}).TryPush(); err != nil {
+			t.Fatalf("TryPush(%q) error = %v", path, err)
+		}
+
+		if got.URL.Path != "/api/webhook/v1/asa-automations/wo-created" {
+			t.Fatalf("TryPush(%q) path = %s", path, got.URL.Path)
+		}
+	}
+
+	if _, err := (Webhook{Path: "/orders/created"}).TryPush(); err != nil {
+		t.Fatalf("TryPush error = %v", err)
+	}
+
+	if got.URL.Path != "/api/webhook/v1/asa-automations/orders/created" {
+		t.Fatalf("nested path = %s", got.URL.Path)
+	}
 }
